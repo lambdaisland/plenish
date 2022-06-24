@@ -21,9 +21,9 @@
 ;; docker ps
 ;; docker exec -it -u postgres <container> psql
 
-;; CREATE DATABASE replica;
-;; CREATE USER plenish WITH PASSWORD 'plenish';
-;; GRANT ALL ON DATABASE replica TO plenish;
+CREATE DATABASE replica;
+CREATE ROLE plenish WITH LOGIN PASSWORD 'plenish';
+GRANT ALL ON DATABASE replica TO plenish;
 
 (f/defactory line-item
   {:line-item/description "Widgets"
