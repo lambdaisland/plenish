@@ -1,8 +1,7 @@
 {:paths ["src" "resources"]
 
  :deps
- {
-  com.cnuernber/charred {:mvn/version "1.010"}}
+ {com.cnuernber/charred {:mvn/version "1.010"}}
 
  :mvn/repos
  {"my.datomic.com" {:url "https://my.datomic.com/repo"}}
@@ -10,7 +9,7 @@
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps  {com.lambdaisland/facai {:local/root "/home/arne/github/lambdaisland/facai"}
+   :extra-deps  {com.lambdaisland/facai {:mvn/version "RELEASE"}
                  djblue/portal {:mvn/version "RELEASE"}}}
 
   :test

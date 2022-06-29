@@ -425,8 +425,8 @@
                       (mapcat op->sql)
                       (map #(honey/format % {:quoted true})))
                      (:ops ctx))]
-        (run! prn (:ops ctx))
-        (run! #(do (clojure.pprint/pprint %)
+        #_(run! prn (:ops ctx))
+        (run! #(do #_(clojure.pprint/pprint %)
                    (jdbc/execute! ds %)) queries)
         (recur (dissoc ctx :ops) txs))
       ctx)))
