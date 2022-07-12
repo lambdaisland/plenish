@@ -53,11 +53,10 @@
     (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
 
     (is (= {:cart/db__id cart-id
-            :cart/created_at #inst "2022-01-01T12:57:01.089-00:00"
-            :cart/age_ms 123.456,
+            :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
+            :cart/age_ms 123.456
             :cart/user user-id}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
-
 
 (comment
   ;; REPL alternative to fixture
