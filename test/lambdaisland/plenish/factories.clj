@@ -46,3 +46,8 @@
     [:cart/age-ms :double]
     [:cart/line-items :ref {:db/cardinality :db.cardinality/many}]
     [:cart/user :ref]]))
+
+(def metaschema
+  {:tables {:line-item/price {}
+            :cart/created-at {}
+            :user/uuid {:name "users"}}})

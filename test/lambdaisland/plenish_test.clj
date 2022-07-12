@@ -22,32 +22,23 @@
       @(d/transact *conn* factories/schema)
       (f))))
 
+(deftest basic-create-sync-test
+  (fd/create! *conn* factories/cart)
+
+  (let [ctx (plenish/initial-ctx *conn* factories/metaschema)]
+    (plenish/import-tx-range
+     ctx *conn* *ds*
+     (d/tx-range (d/log *conn*) nil nil))
+
+    (is (= {:user/email "arne@example.com"
+            :user/email-confirmed? true}
+           (d/q '[:find (pull ?e [:user/email :user/email-confirmed?]) .
+                  :where [?e :user/uuid]]
+                (d/db *conn*))))))
+
 (comment
   (def *conn* (doto (d/connect
                      (doto (str "datomic:mem://" (gensym "tst"))
                        d/create-database))
                 (d/transact factories/schema)))
   (def *ds* (jdbc/get-datasource "jdbc:pgsql://localhost:5432/replica?user=postgres")))
-
-(fd/create! *conn* factories/cart)
-
-
-(def ctx
-  (plenish/initial-ctx *conn*
-                       {:tables {:line-item/price {}
-                                 :cart/created-at {}
-                                 :user/uuid {:name "users"}}}))
-
-(def new-ctx
-  (plenish/import-tx-range ctx *conn* *ds*
-                           (d/tx-range (d/log *conn*) nil nil))
-  )
-
-(count (mapcat :data (d/tx-range (d/log *conn*) nil nil)))
-
-(seq
- (d/tx-range (d/log *conn*) nil nil))
-
-(d/q '[:find (pull ?e [*])
-       :where [?e :user/uuid]]
-     (d/db *conn*))

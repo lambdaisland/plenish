@@ -9,7 +9,7 @@
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps  {com.lambdaisland/facai {:mvn/version "RELEASE"}
+   :extra-deps  {com.lambdaisland/facai {:mvn/version "0.6.52-alpha"}
                  djblue/portal {:mvn/version "RELEASE"}}}
 
   :test

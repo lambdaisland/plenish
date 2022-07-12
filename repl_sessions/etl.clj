@@ -3,10 +3,6 @@
             [datomic.api :as d]
             [next.jdbc :as jdbc]))
 
-"datomic:dev://localhost:4334/tnt"
-"datomic:dev://localhost:4334/onze"
-
-
 ;; CREATE DATABASE enzo;
 ;; CREATE ROLE plenish WITH LOGIN PASSWORD 'plenish';
 ;; GRANT ALL ON DATABASE enzo TO plenish;
@@ -23,9 +19,6 @@
      conn
      ds
      txs)))
-
-(import! "datomic:dev://localhost:4334/example-tenant---camelot-global-trust-pte-ltd"
-         "jdbc:pgsql://localhost:5432/camelot?user=plenish&password=plenish")
 
 (import! "datomic:dev://localhost:4334/example-tenant---enzo-gardening-service-limited-demo-"
          "jdbc:pgsql://localhost:5432/enzo?user=plenish&password=plenish")
