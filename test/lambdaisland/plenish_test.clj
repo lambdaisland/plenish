@@ -41,21 +41,18 @@
             ["SELECT email, \"email_confirmed?\" FROM users;"])))))
 
 (deftest add-membership-after-attributes
-
-
-
-  (let [fres (fd/create! *conn* factories/cart {:traits [:not-created-yet]})
+  (let [fres    (fd/create! *conn* factories/cart {:traits [:not-created-yet]})
         cart-id (:db/id (f/sel1 fres factories/cart))
         user-id (:db/id (f/sel1 fres factories/user))
-        _ (d/transact *conn* [{:db/id cart-id
-                               :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
-        ctx (plenish/initial-ctx *conn* factories/metaschema)]
+        _       (d/transact *conn* [{:db/id           cart-id
+                                     :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
+        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
     (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
 
-    (is (= {:cart/db__id cart-id
+    (is (= {:cart/db__id     cart-id
             :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
-            :cart/age_ms 123.456
-            :cart/user user-id}
+            :cart/age_ms     123.456
+            :cart/user       user-id}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
 
 (comment
