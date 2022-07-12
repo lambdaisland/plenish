@@ -293,12 +293,20 @@
   "Process the datoms within a transaction for a single entity. This checks all
   tables to see if the entity contains the membership attribute, if so
   operations get added under `:ops` to evolve the schema and insert the data."
-  [{:keys [tables] :as ctx} db eid datoms]
+  [{:keys [tables] :as ctx} prev-db db eid datoms]
   (reduce
    (fn [ctx [mem-attr table-opts]]
      (if (has-attr? db eid mem-attr)
        ;; Handle cardinality/one separate from cardinality/many
-       (let [datoms           (remove (fn [d] (contains? ignore-idents (ctx-ident ctx (-a d)))) datoms)
+       (let [datoms           (if (not (has-attr? prev-db eid mem-attr))
+                                ;; If after the previous transaction the
+                                ;; membership attribute wasn't there yet, then
+                                ;; it's added in this tx. In that case pull in
+                                ;; all pre-existing datoms for the entities,
+                                ;; they need to make across as well.
+                                (concat datoms (d/datoms prev-db :eavt eid))
+                                datoms)
+             datoms           (remove (fn [d] (contains? ignore-idents (ctx-ident ctx (-a d)))) datoms)
              card-one-datoms  (remove (fn [d] (ctx-card-many? ctx (-a d))) datoms)
              card-many-datoms (filter (fn [d] (ctx-card-many? ctx (-a d))) datoms)]
          (-> ctx
@@ -315,10 +323,11 @@
   schema changes, or other changes involving `:db/ident`."
   [ctx conn {:keys [t data]}]
   (let [ctx (track-idents ctx data)
+        prev-db (d/as-of (d/db conn) (dec t))
         db (d/as-of (d/db conn) t)
         entities (group-by -e data)]
     (reduce (fn [ctx [eid datoms]]
-              (process-entity ctx db eid datoms))
+              (process-entity ctx prev-db db eid datoms))
             ctx
             entities)))
 
