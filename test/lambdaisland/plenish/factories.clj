@@ -19,7 +19,13 @@
   {:cart/created-at #inst "2022-06-23T12:57:01.089-00:00"
    :cart/age-ms 123.456
    :cart/line-items [line-item line-item]
-   :cart/user user})
+   :cart/user user}
+
+  :traits
+  {:not-created-yet
+   {:after-build
+    (fn [ctx]
+      (f/update-result ctx dissoc :cart/created-at))}})
 
 (defn s
   "More concise Datomic schema notation"
