@@ -1,7 +1,7 @@
 {:paths ["src" "resources"]
 
  :deps
- {com.cnuernber/charred {:mvn/version "1.010"}}
+ {com.cnuernber/charred {:mvn/version "1.011"}}
 
  :mvn/repos
  {"my.datomic.com" {:url "https://my.datomic.com/repo"}}
@@ -21,7 +21,9 @@
                 com.github.seancorfield/honeysql {:mvn/version "2.2.891"}}}
 
   :postgresql
-  {:extra-deps {com.impossibl.pgjdbc-ng/pgjdbc-ng {:mvn/version "0.8.9"}}}
+  {:extra-deps {;; org.postgresql/postgresql {:mvn/version "42.4.0"}      ; "classic" pg jdbc driver
+                com.impossibl.pgjdbc-ng/pgjdbc-ng {:mvn/version "0.8.9"}  ; new generation driver
+                }}
 
   :datomic-pro
   {:extra-deps {com.datomic/datomic-pro {:mvn/version "1.0.6165"}}}
