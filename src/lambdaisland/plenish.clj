@@ -402,10 +402,19 @@
   metadata (`:db/valueType`, `:db/cardinality` etc in memory on our inside
   inside a `ctx` map)."
   [db]
-  (d/q
-   '[:find [(pull ?e [*]) ...]
-     :where [?e :db/ident]]
-   db))
+  (map
+   (fn [ident-attrs]
+     (update-vals
+      ident-attrs
+      (fn [v]
+        (if-let [id (when (map? v)
+                      (:db/id v))]
+          id
+          v))))
+   (d/q
+    '[:find [(pull ?e [*]) ...]
+      :where [?e :db/ident]]
+    db)))
 
 (defn initial-ctx
   "Create the context map that gets passed around all through the process,
