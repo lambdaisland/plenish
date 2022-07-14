@@ -44,15 +44,29 @@
   (let [fres    (fd/create! *conn* factories/cart {:traits [:not-created-yet]})
         cart-id (:db/id (f/sel1 fres factories/cart))
         user-id (:db/id (f/sel1 fres factories/user))
-        _       (d/transact *conn* [{:db/id           cart-id
-                                     :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
         ctx     (plenish/initial-ctx *conn* factories/metaschema)]
+    (d/transact *conn* [{:db/id           cart-id
+                         :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
     (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
 
     (is (= {:cart/db__id     cart-id
             :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
             :cart/age_ms     123.456
             :cart/user       user-id}
+           (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
+
+(deftest retract-attribute-test
+  (let [fres    (fd/create! *conn* factories/cart)
+        cart-id (:db/id (f/sel1 fres factories/cart))
+        user-id (:db/id (f/sel1 fres factories/user))
+        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
+    (d/transact *conn* [[:db/retract cart-id :cart/age-ms 123.456]])
+    (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+
+    (is (= {:cart/db__id     cart-id
+            :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
+            :cart/user       user-id
+            :cart/age_ms     nil}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
 
 (comment

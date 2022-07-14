@@ -292,7 +292,14 @@
                              (column-name ctx mem-attr attr)
                              (encode-value ctx (ctx-valueType ctx attr-id) value)}}]))))))
 
-(def ignore-idents #{:db/ensure :db/fn})
+(def ignore-idents #{:db/ensure
+                     :db/fn
+                     :db.install/valueType
+                     :db.install/attribute
+                     :db.install/function
+                     :db.entity/attrs
+                     :db.entity/preds
+                     :db.attr/preds})
 
 (defn process-entity
   "Process the datoms within a transaction for a single entity. This checks all
@@ -381,10 +388,13 @@
    columns))
 
 (defmethod op->sql :upsert [[_ {:keys [table values]}]]
-  [{:insert-into   [(keyword table)]
-    :values        [values]
-    :on-conflict   [:db__id]
-    :do-update-set (keys (dissoc values "db__id"))}])
+  (let [attrs (dissoc values "db__id")
+        op {:insert-into   [(keyword table)]
+            :values        [values]
+            :on-conflict   [:db__id]}]
+    [(if (seq attrs)
+       (assoc op :do-update-set (keys attrs))
+       (assoc op :do-nothing []))]))
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
   [{:create-table [table :if-not-exists],
@@ -431,11 +441,16 @@
   (let [idents (pull-idents (d/as-of (d/db conn) 999))]
     {:entids (into {} (map (juxt :db/ident :db/id)) idents)
      :idents (into {} (map (juxt :db/id identity)) idents)
-     :tables (update (:tables metaschema)
-                     :db/txInstant
-                     assoc :name "transactions")
+     :tables (-> metaschema
+                 :tables
+                 (update :db/txInstant assoc :name "transactions")
+                 (update :db/ident assoc :name "idents"))
      :db-types pg-type
      :ops [[:ensure-columns
+            {:table   "idents"
+             :columns {:db/id {:name "db__id"
+                               :type :bigint}}}]
+           [:ensure-columns
             {:table   "transactions"
              :columns {:t {:name "t"
                            :type :bigint}}}]]}))
