@@ -272,7 +272,7 @@
                       :fk-table (table-name ctx mem-attr)
                       :val-attr val-attr
                       :val-col (column-name ctx mem-attr val-attr)
-                      :val-type (:type join-opts)} ]))
+                      :val-type (:type join-opts)}]))
           (update-in [:tables mem-attr :join-tables] (fnil into {}) missing-joins))
       :->
       (update :ops
@@ -287,7 +287,7 @@
                              (column-name ctx mem-attr attr)
                              (encode-value ctx (ctx-valueType ctx attr-id) value)}}]))))))
 
-(def ignore-idents #{:db/ensure :db/fn})
+(def ignore-idents #{:db/ensure :db/fn :db/doc :db/ident})
 
 (defn process-entity
   "Process the datoms within a transaction for a single entity. This checks all
@@ -363,7 +363,7 @@
 
 (defmethod op->sql :ensure-columns [[_ {:keys [table columns]}]]
   (into
-   [{:create-table [table :if-not-exists],
+   [{:create-table [table :if-not-exists]
      :with-columns [[:db__id [:raw "bigint"] [:primary-key]]]}]
    (map (fn [[_ {:keys [name type]}]]
           {:alter-table [table]
@@ -382,7 +382,7 @@
     :do-update-set (keys (dissoc values "db__id"))}])
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
-  [{:create-table [table :if-not-exists],
+  [{:create-table [table :if-not-exists]
     :with-columns [[:db__id [:raw "bigint"] [:primary-key]]
                    [(keyword val-col) (if (keyword? val-type)
                                         [:raw (name val-type)]
