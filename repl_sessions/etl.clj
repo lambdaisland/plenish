@@ -8,7 +8,7 @@
 ;; GRANT ALL ON DATABASE enzo TO plenish;
 
 (def metaschema
-  (read-string (slurp "/home/arne/runeleven/melvn/presto-etc/datomic/accounting.edn")))
+  (read-string (slurp "/home/arne/Eleven/runeleven/melvn/presto-etc/datomic/accounting.edn")))
 
 (defn recreate-db! [name]
   (let [ds (jdbc/get-datasource "jdbc:pgsql://localhost:5432/postgres?user=postgres")]

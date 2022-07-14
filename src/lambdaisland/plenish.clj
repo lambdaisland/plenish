@@ -237,7 +237,12 @@
                   :values {:db/id eid}}]
                 [:upsert
                  {:table  (table-name ctx mem-attr)
-                  :values (into {"db__id" eid}
+                  :values (into (cond-> {"db__id" eid}
+                                  ;; Bit of manual fudgery to also get the "t"
+                                  ;; value of each transaction into
+                                  ;; our "transactions" table.
+                                  (= :db/txInstant mem-attr)
+                                  (assoc "t" (d/tx->t (-t (first datoms)))))
                                 (map (juxt #(column-name ctx mem-attr (ctx-ident ctx (-a %)))
                                            #(when (-added? %)
                                               (encode-value ctx
@@ -287,7 +292,14 @@
                              (column-name ctx mem-attr attr)
                              (encode-value ctx (ctx-valueType ctx attr-id) value)}}]))))))
 
-(def ignore-idents #{:db/ensure :db/fn})
+(def ignore-idents #{:db/ensure
+                     :db/fn
+                     :db.install/valueType
+                     :db.install/attribute
+                     :db.install/function
+                     :db.entity/attrs
+                     :db.entity/preds
+                     :db.attr/preds})
 
 (defn process-entity
   "Process the datoms within a transaction for a single entity. This checks all
@@ -376,10 +388,13 @@
    columns))
 
 (defmethod op->sql :upsert [[_ {:keys [table values]}]]
-  [{:insert-into   [(keyword table)]
-    :values        [values]
-    :on-conflict   [:db__id]
-    :do-update-set (keys (dissoc values "db__id"))}])
+  (let [attrs (dissoc values "db__id")
+        op {:insert-into   [(keyword table)]
+            :values        [values]
+            :on-conflict   [:db__id]}]
+    [(if (seq attrs)
+       (assoc op :do-update-set (keys attrs))
+       (assoc op :do-nothing []))]))
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
   [{:create-table [table :if-not-exists],
@@ -397,10 +412,19 @@
   metadata (`:db/valueType`, `:db/cardinality` etc in memory on our inside
   inside a `ctx` map)."
   [db]
-  (d/q
-   '[:find [(pull ?e [*]) ...]
-     :where [?e :db/ident]]
-   db))
+  (map
+   (fn [ident-attrs]
+     (update-vals
+      ident-attrs
+      (fn [v]
+        (if-let [id (when (map? v)
+                      (:db/id v))]
+          id
+          v))))
+   (d/q
+    '[:find [(pull ?e [*]) ...]
+      :where [?e :db/ident]]
+    db)))
 
 (defn initial-ctx
   "Create the context map that gets passed around all through the process,
@@ -417,8 +441,19 @@
   (let [idents (pull-idents (d/as-of (d/db conn) 999))]
     {:entids (into {} (map (juxt :db/ident :db/id)) idents)
      :idents (into {} (map (juxt :db/id identity)) idents)
-     :tables (:tables metaschema)
-     :db-types pg-type}))
+     :tables (-> metaschema
+                 :tables
+                 (update :db/txInstant assoc :name "transactions")
+                 (update :db/ident assoc :name "idents"))
+     :db-types pg-type
+     :ops [[:ensure-columns
+            {:table   "idents"
+             :columns {:db/id {:name "db__id"
+                               :type :bigint}}}]
+           [:ensure-columns
+            {:table   "transactions"
+             :columns {:t {:name "t"
+                           :type :bigint}}}]]}))
 
 (defn import-tx-range
   "Import a range of transactions (e.g. from [[d/tx-range]]) into the target
@@ -434,8 +469,14 @@
                       (mapcat op->sql)
                       (map #(honey/format % {:quoted true})))
                      (:ops ctx))]
-        #_(run! prn (:ops ctx))
-        (run! #(do #_(clojure.pprint/pprint %)
-                   (jdbc/execute! ds %)) queries)
+        ;; Each datomic transaction gets committed within a separate JDBC
+        ;; transaction, and this includes adding an entry to the "transactions"
+        ;; table. This allows us to see exactly which transactions have been
+        ;; imported, and to resume work from there.
+        #_(prn 't '--> (:t tx))
+        (jdbc/with-transaction [jdbc-tx ds]
+          #_(run! prn (:ops ctx))
+          (run! #(do #_(clojure.pprint/pprint %)
+                     (jdbc/execute! jdbc-tx %)) queries))
         (recur (dissoc ctx :ops) txs))
       ctx)))
