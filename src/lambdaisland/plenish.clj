@@ -237,7 +237,12 @@
                   :values {:db/id eid}}]
                 [:upsert
                  {:table  (table-name ctx mem-attr)
-                  :values (into {"db__id" eid}
+                  :values (into (cond-> {"db__id" eid}
+                                  ;; Bit of manual fudgery to also get the "t"
+                                  ;; value of each transaction into
+                                  ;; our "transactions" table.
+                                  (= :db/txInstant mem-attr)
+                                  (assoc "t" (d/tx->t (-t (first datoms)))))
                                 (map (juxt #(column-name ctx mem-attr (ctx-ident ctx (-a %)))
                                            #(when (-added? %)
                                               (encode-value ctx
@@ -417,8 +422,14 @@
   (let [idents (pull-idents (d/as-of (d/db conn) 999))]
     {:entids (into {} (map (juxt :db/ident :db/id)) idents)
      :idents (into {} (map (juxt :db/id identity)) idents)
-     :tables (:tables metaschema)
-     :db-types pg-type}))
+     :tables (update (:tables metaschema)
+                     :db/txInstant
+                     assoc :name "transactions")
+     :db-types pg-type
+     :ops [[:ensure-columns
+            {:table   "transactions"
+             :columns {:t {:name "t"
+                           :type :bigint}}}]]}))
 
 (defn import-tx-range
   "Import a range of transactions (e.g. from [[d/tx-range]]) into the target
