@@ -469,8 +469,14 @@
                       (mapcat op->sql)
                       (map #(honey/format % {:quoted true})))
                      (:ops ctx))]
-        #_(run! prn (:ops ctx))
-        (run! #(do #_(clojure.pprint/pprint %)
-                   (jdbc/execute! ds %)) queries)
+        ;; Each datomic transaction gets committed within a separate JDBC
+        ;; transaction, and this includes adding an entry to the "transactions"
+        ;; table. This allows us to see exactly which transactions have been
+        ;; imported, and to resume work from there.
+        #_(prn 't '--> (:t tx))
+        (jdbc/with-transaction [jdbc-tx ds]
+          #_(run! prn (:ops ctx))
+          (run! #(do #_(clojure.pprint/pprint %)
+                     (jdbc/execute! jdbc-tx %)) queries))
         (recur (dissoc ctx :ops) txs))
       ctx)))
