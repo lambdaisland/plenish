@@ -8,6 +8,12 @@ Sync Datomic to a RDBMS.
 [![CircleCI](https://circleci.com/gh/lambdaisland/plenish.svg?style=svg)](https://circleci.com/gh/lambdaisland/plenish) [![cljdoc badge](https://cljdoc.org/badge/lambdaisland/plenish)](https://cljdoc.org/d/lambdaisland/plenish) [![Clojars Project](https://img.shields.io/clojars/v/lambdaisland/plenish.svg)](https://clojars.org/lambdaisland/plenish)
 <!-- /badges -->
 
+## Requirements
+It requires Clojure version >= 1.11.1.
+You have two options:
+1. Either if your project is using plenish, make clojure version >= 1.11.1 as your deps.edn dependency.
+2. Using the Clojure CLI >= 1.11.1
+
 ## Running tests
 
 Requires PostgreSQL to be running. To not have to mess around with permissions we run it like so:
