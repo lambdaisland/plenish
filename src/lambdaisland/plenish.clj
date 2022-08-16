@@ -398,7 +398,7 @@
 
 (defmethod op->sql :delete [[_ {:keys [table values]}]]
   (let [{id :db/id} values]
-    [{:delete-from table
+    [{:delete-from (keyword table)
       :where [:= :db__id id]}]))
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
