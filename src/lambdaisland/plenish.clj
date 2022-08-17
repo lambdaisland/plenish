@@ -277,7 +277,7 @@
                       :fk-table (table-name ctx mem-attr)
                       :val-attr val-attr
                       :val-col (column-name ctx mem-attr val-attr)
-                      :val-type (:type join-opts)} ]))
+                      :val-type (:type join-opts)}]))
           (update-in [:tables mem-attr :join-tables] (fnil into {}) missing-joins))
       :->
       (update :ops
@@ -375,7 +375,7 @@
 
 (defmethod op->sql :ensure-columns [[_ {:keys [table columns]}]]
   (into
-   [{:create-table [table :if-not-exists],
+   [{:create-table [table :if-not-exists]
      :with-columns [[:db__id [:raw "bigint"] [:primary-key]]]}]
    (map (fn [[_ {:keys [name type]}]]
           {:alter-table [table]
@@ -396,8 +396,13 @@
        (assoc op :do-update-set (keys attrs))
        (assoc op :do-nothing []))]))
 
+(defmethod op->sql :delete [[_ {:keys [table values]}]]
+  (let [{id :db/id} values]
+    [{:delete-from (keyword table)
+      :where [:= :db__id id]}]))
+
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
-  [{:create-table [table :if-not-exists],
+  [{:create-table [table :if-not-exists]
     :with-columns [[:db__id [:raw "bigint"] [:primary-key]]
                    [(keyword val-col) (if (keyword? val-type)
                                         [:raw (name val-type)]
