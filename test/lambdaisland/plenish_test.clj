@@ -67,7 +67,21 @@
             :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
             :cart/user       user-id
             :cart/age_ms     nil}
-           (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
+           (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
+    (is (= [{:cart_x_line_items/db__id 17592186045418, :cart_x_line_items/line_items 17592186045420}]
+           (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
+
+(deftest retract-entity-test
+  (let [fres    (fd/create! *conn* factories/cart)
+        cart-id (:db/id (f/sel1 fres factories/cart))
+        user-id (:db/id (f/sel1 fres factories/user))
+        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
+    (d/transact *conn* [[:db/retractEntity cart-id]])
+    (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+
+    (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart;"])))
+    (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
+
 
 (comment
   ;; REPL alternative to fixture

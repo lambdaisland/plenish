@@ -219,6 +219,7 @@
                              (and (not (-added? d))
                                   (= mem-attr (ctx-ident ctx (-a d)))))
                            datoms)]
+    ;;(clojure.pprint/pprint ['card-one-entity-ops mem-attr eid datoms retracted?])
     (cond-> ctx
       ;; Evolve the schema
       (seq missing-cols)
@@ -234,7 +235,7 @@
               (if retracted?
                 [:delete
                  {:table  (table-name ctx mem-attr)
-                  :values {:db/id eid}}]
+                  :values {"db__id" eid}}]
                 [:upsert
                  {:table  (table-name ctx mem-attr)
                   :values (into (cond-> {"db__id" eid}
@@ -306,9 +307,11 @@
   tables to see if the entity contains the membership attribute, if so
   operations get added under `:ops` to evolve the schema and insert the data."
   [{:keys [tables] :as ctx} prev-db db eid datoms]
+  ;;(clojure.pprint/pprint ['process-entity eid datoms])
   (reduce
    (fn [ctx [mem-attr table-opts]]
-     (if (has-attr? db eid mem-attr)
+     (if (or (has-attr? prev-db eid mem-attr)
+             (has-attr? db eid mem-attr))
        ;; Handle cardinality/one separate from cardinality/many
        (let [datoms           (if (not (has-attr? prev-db eid mem-attr))
                                 ;; If after the previous transaction the
@@ -321,9 +324,12 @@
              datoms           (remove (fn [d] (contains? ignore-idents (ctx-ident ctx (-a d)))) datoms)
              card-one-datoms  (remove (fn [d] (ctx-card-many? ctx (-a d))) datoms)
              card-many-datoms (filter (fn [d] (ctx-card-many? ctx (-a d))) datoms)]
-         (-> ctx
-             (card-one-entity-ops mem-attr eid card-one-datoms)
-             (card-many-entity-ops mem-attr eid card-many-datoms)))
+         (cond-> ctx
+           (seq card-one-datoms)
+           (card-one-entity-ops mem-attr eid card-one-datoms)
+
+           (seq card-many-datoms)
+           (card-many-entity-ops mem-attr eid card-many-datoms)))
        ctx))
    ctx
    tables))
@@ -397,9 +403,8 @@
        (assoc op :do-nothing []))]))
 
 (defmethod op->sql :delete [[_ {:keys [table values]}]]
-  (let [{id :db/id} values]
-    [{:delete-from (keyword table)
-      :where [:= :db__id id]}]))
+  [{:delete-from (keyword table)
+    :where [:= :db__id (get values "db__id")]}])
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
   [{:create-table [table :if-not-exists]
@@ -444,13 +449,18 @@
   ;; bootstrap in pieces: t=0 most basic idents, t=57 add double, t=63 add
   ;; docstrings, ...
   (let [idents (pull-idents (d/as-of (d/db conn) 999))]
-    {:entids (into {} (map (juxt :db/ident :db/id)) idents)
+    {;; Track datomic schema
+     :entids (into {} (map (juxt :db/ident :db/id)) idents)
      :idents (into {} (map (juxt :db/id identity)) idents)
+     ;; Configure/track relational schema
      :tables (-> metaschema
                  :tables
                  (update :db/txInstant assoc :name "transactions")
                  (update :db/ident assoc :name "idents"))
+     ;; Mapping from datomic to relational type
      :db-types pg-type
+     ;; Create two columns that don't have a attribute as such in datomic, but
+     ;; which we still want to track
      :ops [[:ensure-columns
             {:table   "idents"
              :columns {:db/id {:name "db__id"
