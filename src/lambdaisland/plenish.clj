@@ -441,34 +441,36 @@
   contains both caches for quick lookup of datomic schema information,
   configuration regarding tables and target db, and eventually `:ops` that need
   to be processed."
-  [conn metaschema]
+  ([conn metaschema]
+   (initial-ctx conn metaschema 999))
+  ([conn metaschema t]
   ;; Bootstrap, make sure we have info about idents that datomic creates itself
   ;; at db creation time. d/as-of t=999 is basically an empty database with only
   ;; metaschema attributes (:db/txInstant etc), since the first "real"
   ;; transaction is given t=1000. Interesting to note that Datomic seems to
   ;; bootstrap in pieces: t=0 most basic idents, t=57 add double, t=63 add
   ;; docstrings, ...
-  (let [idents (pull-idents (d/as-of (d/db conn) 999))]
-    {;; Track datomic schema
-     :entids (into {} (map (juxt :db/ident :db/id)) idents)
-     :idents (into {} (map (juxt :db/id identity)) idents)
+   (let [idents (pull-idents (d/as-of (d/db conn) t))]
+     {;; Track datomic schema
+      :entids (into {} (map (juxt :db/ident :db/id)) idents)
+      :idents (into {} (map (juxt :db/id identity)) idents)
      ;; Configure/track relational schema
-     :tables (-> metaschema
-                 :tables
-                 (update :db/txInstant assoc :name "transactions")
-                 (update :db/ident assoc :name "idents"))
+      :tables (-> metaschema
+                  :tables
+                  (update :db/txInstant assoc :name "transactions")
+                  (update :db/ident assoc :name "idents"))
      ;; Mapping from datomic to relational type
-     :db-types pg-type
+      :db-types pg-type
      ;; Create two columns that don't have a attribute as such in datomic, but
      ;; which we still want to track
-     :ops [[:ensure-columns
-            {:table   "idents"
-             :columns {:db/id {:name "db__id"
-                               :type :bigint}}}]
-           [:ensure-columns
-            {:table   "transactions"
-             :columns {:t {:name "t"
-                           :type :bigint}}}]]}))
+      :ops [[:ensure-columns
+             {:table   "idents"
+              :columns {:db/id {:name "db__id"
+                                :type :bigint}}}]
+            [:ensure-columns
+             {:table   "transactions"
+              :columns {:t {:name "t"
+                            :type :bigint}}}]]})))
 
 (defn import-tx-range
   "Import a range of transactions (e.g. from [[d/tx-range]]) into the target
