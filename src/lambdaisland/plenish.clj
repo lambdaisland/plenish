@@ -11,6 +11,9 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:dynamic *debug* (= (System/getenv "PLENISH_DEBUG") "true"))
+(defn dbg [& args] (when *debug* (prn args)))
+
 ;; Basic helpers
 
 (defn has-attr?
@@ -192,11 +195,33 @@
     :db.type/instant [:raw (format "to_timestamp(%.3f)" (double (/ (.getTime ^java.util.Date value) 1000)))]
     value))
 
+;; The functions below are the heart of the process
+
+;; process-tx                       -  process all datoms in a single transaction
+;; \___ process-entity              -  process datoms within a transaction with the same entity id
+;;      \____ card-one-entity-ops   -  process datoms for all cardinality/one attributes of a single entity
+;;      \____ card-many-entity-ops  -  process datoms for all cardinality/many attributes of a single entity
+
 (defn card-one-entity-ops
   "Add operations `:ops` to the context for all the `cardinality/one` datoms in a
-  single transaction and a single table, identified by its memory attribute."
+  single transaction and a single entity/table, identified by its memory
+  attribute."
   [{:keys [tables] :as ctx} mem-attr eid datoms]
-  (let [missing-cols (sequence
+  {:pre [(every? #(= eid (-e %)) datoms)]}
+  (let [;; An update of an attribute will manifest as two datoms in the same
+        ;; transaction, one with added=true, and one with added=false. In this
+        ;; case we can ignore the added=false datom.
+        datoms (remove (fn [d]
+                         (and (not (-added? d))
+                              (some #(and (= (-a d) (-a %))
+                                          (-added? %)) datoms)))
+                       datoms)
+        ;; Figure out which columns don't exist yet in the target database. This
+        ;; may find columns that actually do already exist, depending on the
+        ;; state of the context. This is fine, we'll process these schema
+        ;; changes in an idempotent way, we just want to prevent us from having
+        ;; to attempt schema changes for every single transaction.
+        missing-cols (sequence
                       (comp
                        (remove (fn [d]
                                  ;; If there's already a `:columns` entry in the
@@ -213,12 +238,20 @@
                                  {:name (column-name ctx mem-attr attr)
                                   :type (attr-db-type ctx attr-id)}]))))
                       datoms)
-        retracted?   (some (fn [d]
-                             ;; Datom with membership attribute was retracted,
-                             ;; remove from table
-                             (and (not (-added? d))
-                                  (= mem-attr (ctx-ident ctx (-a d)))))
-                           datoms)]
+        ;; Do we need to delete the row corresponding with this entity.
+        retracted? (and (some (fn [d]
+                                ;; Datom with membership attribute was retracted,
+                                ;; remove from table
+                                (and (not (-added? d))
+                                     (= mem-attr (ctx-ident ctx (-a d)))))
+                              datoms)
+                        (not (some (fn [d]
+                                     ;; Unless the same transaction
+                                     ;; immediately adds a new datom with the
+                                     ;; membership attribute
+                                     (and (-added? d)
+                                          (= mem-attr (ctx-ident ctx (-a d)))))
+                                   datoms)))]
     ;;(clojure.pprint/pprint ['card-one-entity-ops mem-attr eid datoms retracted?])
     (cond-> ctx
       ;; Evolve the schema
@@ -229,7 +262,7 @@
                    {:table   (table-name ctx mem-attr)
                     :columns (into {} missing-cols)}])
           (update-in [:tables mem-attr :columns] (fnil into {}) missing-cols))
-      ;; Delete/upsert values
+      ;; Delete/insert values
       :->
       (update :ops (fnil conj [])
               (if retracted?
@@ -238,6 +271,7 @@
                   :values {"db__id" eid}}]
                 [:upsert
                  {:table  (table-name ctx mem-attr)
+                  :by #{"db__id"}
                   :values (into (cond-> {"db__id" eid}
                                   ;; Bit of manual fudgery to also get the "t"
                                   ;; value of each transaction into
@@ -286,12 +320,20 @@
               (for [d datoms]
                 (let [attr-id (-a d)
                       attr (ctx-ident ctx attr-id)
-                      value (-v d)]
-                  [(if (-added? d) :upsert :delete)
-                   {:table (join-table-name ctx mem-attr attr)
-                    :values {"db__id" eid
-                             (column-name ctx mem-attr attr)
-                             (encode-value ctx (ctx-valueType ctx attr-id) value)}}]))))))
+                      value (-v d)
+                      sql-table (join-table-name ctx mem-attr attr)
+                      sql-col (column-name ctx mem-attr attr)
+                      sql-val (encode-value ctx (ctx-valueType ctx attr-id) value)]
+                  (if (-added? d)
+                    [:upsert
+                     {:table sql-table
+                      :by #{"db__id" sql-col}
+                      :values {"db__id" eid
+                               sql-col sql-val}}]
+                    [:delete
+                     {:table sql-table
+                      :values {"db__id" eid
+                               sql-col sql-val}}])))))))
 
 (def ignore-idents #{:db/ensure
                      :db/fn
@@ -393,25 +435,51 @@
                         :if-not-exists]}))
    columns))
 
-(defmethod op->sql :upsert [[_ {:keys [table values]}]]
-  (let [attrs (dissoc values "db__id")
-        op {:insert-into   [(keyword table)]
+(defmethod op->sql :upsert [[_ {:keys [table by values]}]]
+  (let [op {:insert-into   [(keyword table)]
             :values        [values]
-            :on-conflict   [:db__id]}]
+            :on-conflict   (map keyword by)}
+        attrs (apply dissoc values by)]
     [(if (seq attrs)
        (assoc op :do-update-set (keys attrs))
        (assoc op :do-nothing []))]))
 
 (defmethod op->sql :delete [[_ {:keys [table values]}]]
   [{:delete-from (keyword table)
-    :where [:= :db__id (get values "db__id")]}])
+    :where (reduce-kv (fn [clause k v]
+                        (conj clause [:= k v]))
+                      [:and]
+                      (update-keys values keyword))}])
 
 (defmethod op->sql :ensure-join [[_ {:keys [table val-col val-type]}]]
   [{:create-table [table :if-not-exists]
-    :with-columns [[:db__id [:raw "bigint"] [:primary-key]]
+    :with-columns [[:db__id [:raw "bigint"]]
                    [(keyword val-col) (if (keyword? val-type)
                                         [:raw (name val-type)]
-                                        type)]]}])
+                                        val-type)]]}
+   ;; cardinality/many attributes are not multi-set, a given triplet can only be
+   ;; asserted once, so a given [eid value] for a given attribute has to be
+   ;; unique.
+   {::create-index {:on table
+                    :name "unique_attr"
+                    :unique? true
+                    :if-not-exists? true
+                    :columns [:db__id (keyword val-col)]}}])
+
+;; HoneySQL does not support CREATE INDEX. It does support adding indexes
+;; through ALTER TABLE, but that doesn't seem to give us a convenient way to
+;; sneak in the IF NOT EXISTS. Namespacing this becuase it's a pretty
+;; bespoke/specific implementation which we don't want to leak into application
+;; code.
+(honey/register-clause!
+ ::create-index
+ (fn [clause {:keys [on name unique? if-not-exists? columns]}]
+   [(str "CREATE " (when unique? "UNIQUE ") "INDEX "
+         (when if-not-exists? "IF NOT EXISTS ")
+         (when name (str (honey/format-entity name) " "))
+         "ON " (honey/format-entity on)
+         " (" (str/join ", " (map honey/format-entity columns)) ")")])
+ :alter-table)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Top level process
@@ -490,10 +558,10 @@
         ;; transaction, and this includes adding an entry to the "transactions"
         ;; table. This allows us to see exactly which transactions have been
         ;; imported, and to resume work from there.
-        #_(prn 't '--> (:t tx))
+        (dbg 't '--> (:t tx))
         (jdbc/with-transaction [jdbc-tx ds]
-          #_(run! prn (:ops ctx))
-          (run! #(do #_(clojure.pprint/pprint %)
+          (run! dbg (:ops ctx))
+          (run! #(do (dbg %)
                      (jdbc/execute! jdbc-tx %)) queries))
         (recur (dissoc ctx :ops) txs))
       ctx)))

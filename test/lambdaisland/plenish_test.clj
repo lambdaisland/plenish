@@ -74,7 +74,10 @@
             :cart/user       user-id
             :cart/age_ms     nil}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
-    (is (= [{:cart_x_line_items/db__id 17592186045418, :cart_x_line_items/line_items 17592186045420}]
+    (is (= [{:cart_x_line_items/db__id 17592186045418
+             :cart_x_line_items/line_items 17592186045419}
+            {:cart_x_line_items/db__id 17592186045418
+             :cart_x_line_items/line_items 17592186045420}]
            (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
 
 (deftest retract-entity-test
@@ -107,23 +110,69 @@
                :idents/ident "fruit/orange"}]
              (jdbc/execute! *ds* ["SELECT fruit.db__id, idents.ident FROM fruit, idents WHERE fruit.type = idents.db__id;"]))))))
 
-(deftest update-attribute
-  (testing "cardinality/one"
-    (testing "membership attribute"
-      (transact! [{:db/ident :fruit/type
-                   :db/valueType :db.type/string
-                   :db/cardinality :db.cardinality/one}])
+(deftest update-cardinality-one-attribute
+  (testing "membership attribute"
+    (transact! [{:db/ident :fruit/type
+                 :db/valueType :db.type/string
+                 :db/cardinality :db.cardinality/one}])
 
-      (let [tx-report (transact! [{:db/id "apple"
-                                   :fruit/type "apple"}])
-            {apple-id "apple"} (:tempids tx-report)]
-        (transact! [{:db/id apple-id
-                     :fruit/type "orange"}])
+    (let [tx-report (transact! [{:db/id "apple"
+                                 :fruit/type "apple"}])
+          {apple-id "apple"} (:tempids tx-report)]
+      (transact! [{:db/id apple-id
+                   :fruit/type "orange"}])
 
-        (import! {:tables {:fruit/type {}}})
-        (is (= [{:fruit/db__id apple-id
-                 :fruit/type "orange"}]
-               (jdbc/execute! *ds* ["SELECT * FROM fruit"])))))))
+      (import! {:tables {:fruit/type {}}})
+      (is (= [{:fruit/db__id apple-id
+               :fruit/type "orange"}]
+             (jdbc/execute! *ds* ["SELECT * FROM fruit"])))))
+
+  (testing "regular attribute"
+    (transact! [{:db/ident :veggie/type
+                 :db/valueType :db.type/string
+                 :db/cardinality :db.cardinality/one}
+                {:db/ident :veggie/rating
+                 :db/valueType :db.type/long
+                 :db/cardinality :db.cardinality/one}])
+
+    (let [tx-report (transact! [{:db/id "brocolli"
+                                 :veggie/type "brocolli"
+                                 :veggie/rating 4}])
+          {brocolli-id "brocolli"} (:tempids tx-report)]
+      (transact! [{:db/id brocolli-id
+                   :veggie/rating 5}])
+
+      (import! {:tables {:veggie/type {}}})
+      (is (= [{:veggie/db__id brocolli-id
+               :veggie/type "brocolli"
+               :veggie/rating 5}]
+             (jdbc/execute! *ds* ["SELECT * FROM veggie"]))))))
+
+(deftest update-cardinality-many-attribute
+  ;; Does it make sense to have a cardinality/many attribute be the membership
+  ;; attribute? Not sure. Punting on this for now.
+  #_(testing "membership attribute"
+      )
+
+  (testing "regular attribute"
+    (transact! [{:db/ident :veggie/type
+                 :db/valueType :db.type/string
+                 :db/cardinality :db.cardinality/one}
+                {:db/ident :veggie/rating
+                 :db/valueType :db.type/long
+                 :db/cardinality :db.cardinality/many}])
+
+    (let [tx-report (transact! [{:db/id "brocolli"
+                                 :veggie/type "brocolli"
+                                 :veggie/rating 4}])
+          {brocolli-id "brocolli"} (:tempids tx-report)]
+      (transact! [[:db/add brocolli-id :veggie/rating 5]
+                  [:db/retract brocolli-id :veggie/rating 4]])
+
+      (import! {:tables {:veggie/type {}}})
+      (is (= [{:veggie_x_rating/db__id brocolli-id
+               :veggie_x_rating/rating 5}]
+             (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"]))))))
 
 (comment
   ;; REPL alternative to fixture
@@ -133,6 +182,7 @@
                        d/create-database))
                 (d/transact factories/schema)))
   (def *ds* (jdbc/get-datasource "jdbc:pgsql://localhost:5432/replica?user=postgres"))
+
   (require 'kaocha.repl)
   (kaocha.repl/run)
   )
