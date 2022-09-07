@@ -26,28 +26,34 @@
       @(d/transact *conn* factories/schema)
       (f))))
 
+(defn import! [metaschema]
+  (let [ctx (plenish/initial-ctx *conn* metaschema)]
+    (plenish/import-tx-range
+     ctx *conn* *ds*
+     (d/tx-range (d/log *conn*) nil nil))))
+
+(defn transact! [tx]
+  @(d/transact *conn* tx))
+
 (deftest basic-create-sync-test
   (fd/create! *conn* factories/cart)
 
-  (let [ctx (plenish/initial-ctx *conn* factories/metaschema)]
-    (plenish/import-tx-range
-     ctx *conn* *ds*
-     (d/tx-range (d/log *conn*) nil nil))
+  (import! factories/metaschema)
 
-    (is (= {:users/email "arne@example.com"
-            :users/email_confirmed? true}
-           (jdbc/execute-one!
-            *ds*
-            ["SELECT email, \"email_confirmed?\" FROM users;"])))))
+  (is (= {:users/email "arne@example.com"
+          :users/email_confirmed? true}
+         (jdbc/execute-one!
+          *ds*
+          ["SELECT email, \"email_confirmed?\" FROM users;"]))))
 
 (deftest add-membership-after-attributes
   (let [fres    (fd/create! *conn* factories/cart {:traits [:not-created-yet]})
         cart-id (:db/id (f/sel1 fres factories/cart))
-        user-id (:db/id (f/sel1 fres factories/user))
-        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
-    (d/transact *conn* [{:db/id           cart-id
-                         :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
-    (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+        user-id (:db/id (f/sel1 fres factories/user))]
+    (transact! [{:db/id           cart-id
+                 :cart/created-at #inst "2022-01-01T12:57:01.089-00:00"}])
+
+    (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
             :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
@@ -58,10 +64,10 @@
 (deftest retract-attribute-test
   (let [fres    (fd/create! *conn* factories/cart)
         cart-id (:db/id (f/sel1 fres factories/cart))
-        user-id (:db/id (f/sel1 fres factories/user))
-        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
-    (d/transact *conn* [[:db/retract cart-id :cart/age-ms 123.456]])
-    (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+        user-id (:db/id (f/sel1 fres factories/user))]
+
+    (transact! [[:db/retract cart-id :cart/age-ms 123.456]])
+    (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
             :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
@@ -74,14 +80,50 @@
 (deftest retract-entity-test
   (let [fres    (fd/create! *conn* factories/cart)
         cart-id (:db/id (f/sel1 fres factories/cart))
-        user-id (:db/id (f/sel1 fres factories/user))
-        ctx     (plenish/initial-ctx *conn* factories/metaschema)]
-    (d/transact *conn* [[:db/retractEntity cart-id]])
-    (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+        user-id (:db/id (f/sel1 fres factories/user))]
+
+    (transact! [[:db/retractEntity cart-id]])
+    (import! factories/metaschema)
 
     (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart;"])))
     (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
 
+(deftest ident-enum-test
+  (testing "using a ref attribute and idents as an enum-type value"
+    (transact! [{:db/ident :fruit/apple}
+                {:db/ident :fruit/orange}
+                {:db/ident :fruit/type
+                 :db/valueType :db.type/ref
+                 :db/cardinality :db.cardinality/one}])
+    (let [{:keys [tempids]} (transact! [{:db/id "apple"
+                                         :fruit/type :fruit/apple}
+                                        {:db/id "orange"
+                                         :fruit/type :fruit/orange}])]
+      (import! {:tables {:fruit/type {}}})
+
+      (is (= [{:fruit/db__id (get tempids "apple")
+               :idents/ident "fruit/apple"}
+              {:fruit/db__id (get tempids "orange")
+               :idents/ident "fruit/orange"}]
+             (jdbc/execute! *ds* ["SELECT fruit.db__id, idents.ident FROM fruit, idents WHERE fruit.type = idents.db__id;"]))))))
+
+(deftest update-attribute
+  (testing "cardinality/one"
+    (testing "membership attribute"
+      (transact! [{:db/ident :fruit/type
+                   :db/valueType :db.type/string
+                   :db/cardinality :db.cardinality/one}])
+
+      (let [tx-report (transact! [{:db/id "apple"
+                                   :fruit/type "apple"}])
+            {apple-id "apple"} (:tempids tx-report)]
+        (transact! [{:db/id apple-id
+                     :fruit/type "orange"}])
+
+        (import! {:tables {:fruit/type {}}})
+        (is (= [{:fruit/db__id apple-id
+                 :fruit/type "orange"}]
+               (jdbc/execute! *ds* ["SELECT * FROM fruit"])))))))
 
 (comment
   ;; REPL alternative to fixture
@@ -91,5 +133,6 @@
                        d/create-database))
                 (d/transact factories/schema)))
   (def *ds* (jdbc/get-datasource "jdbc:pgsql://localhost:5432/replica?user=postgres"))
-
+  (require 'kaocha.repl)
+  (kaocha.repl/run)
   )
