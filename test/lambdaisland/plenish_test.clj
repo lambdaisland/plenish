@@ -82,6 +82,27 @@
     (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart;"])))
     (is (= [] (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
 
+(deftest ident-enum-test
+  (testing "using a ref attribute and idents as an enum-type value"
+    @(d/transact *conn* [{:db/ident :fruit/apple}
+                         {:db/ident :fruit/orange}
+                         {:db/ident :fruit/type
+                          :db/valueType :db.type/ref
+                          :db/cardinality :db.cardinality/one}])
+    (let [{:keys [tempids]} @(d/transact
+                              *conn*
+                              [{:db/id "apple"
+                                :fruit/type :fruit/apple}
+                               {:db/id "orange"
+                                :fruit/type :fruit/orange}])
+          ctx (plenish/initial-ctx *conn* {:tables {:fruit/type {}}})]
+      (plenish/import-tx-range ctx *conn* *ds* (d/tx-range (d/log *conn*) nil nil))
+
+      (is (= [{:fruit/db__id (get tempids "apple")
+               :idents/ident "fruit/apple"}
+              {:fruit/db__id (get tempids "orange")
+               :idents/ident "fruit/orange"}]
+             (jdbc/execute! *ds* ["SELECT fruit.db__id, idents.ident FROM fruit, idents WHERE fruit.type = idents.db__id;"]))))))
 
 (comment
   ;; REPL alternative to fixture

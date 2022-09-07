@@ -213,12 +213,19 @@
                                  {:name (column-name ctx mem-attr attr)
                                   :type (attr-db-type ctx attr-id)}]))))
                       datoms)
-        retracted?   (some (fn [d]
-                             ;; Datom with membership attribute was retracted,
-                             ;; remove from table
-                             (and (not (-added? d))
-                                  (= mem-attr (ctx-ident ctx (-a d)))))
-                           datoms)]
+        retracted?   (and (some (fn [d]
+                                  ;; Datom with membership attribute was retracted,
+                                  ;; remove from table
+                                  (and (not (-added? d))
+                                       (= mem-attr (ctx-ident ctx (-a d)))))
+                                datoms)
+                          (not (some (fn [d]
+                                       ;; Unless the same transaction
+                                       ;; immediately adds a new datom with the
+                                       ;; membership attribute
+                                       (and (-added? d)
+                                            (= mem-attr (ctx-ident ctx (-a d)))))
+                                     datoms)))]
     ;;(clojure.pprint/pprint ['card-one-entity-ops mem-attr eid datoms retracted?])
     (cond-> ctx
       ;; Evolve the schema
@@ -490,10 +497,10 @@
         ;; transaction, and this includes adding an entry to the "transactions"
         ;; table. This allows us to see exactly which transactions have been
         ;; imported, and to resume work from there.
-        #_(prn 't '--> (:t tx))
+        (prn 't '--> (:t tx))
         (jdbc/with-transaction [jdbc-tx ds]
-          #_(run! prn (:ops ctx))
-          (run! #(do #_(clojure.pprint/pprint %)
+          (run! prn (:ops ctx))
+          (run! #(do (clojure.pprint/pprint %)
                      (jdbc/execute! jdbc-tx %)) queries))
         (recur (dissoc ctx :ops) txs))
       ctx)))
