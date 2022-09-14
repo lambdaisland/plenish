@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.lambdaisland</groupId>
   <artifactId>plenish</artifactId>
-  <version>0.1.23</version>
+  <version>0.2.37</version>
   <name>plenish</name>
   <description></description>
   <url>https://github.com/lambdaisland/plenish</url>
@@ -25,7 +25,7 @@
     <url>https://github.com/lambdaisland/plenish</url>
     <connection>scm:git:git://github.com/lambdaisland/plenish.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/lambdaisland/plenish.git</developerConnection>
-    <tag>14e306a0a5bbdc22b976a1ede213accd63f5a164</tag>
+    <tag>3a5ac075f4f4055a481bb86b10db652a8b6157e3</tag>
   </scm>
   <dependencies>
     <dependency>
@@ -76,7 +76,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <git-revision>14e306a0a5bbdc22b976a1ede213accd63f5a164</git-revision>
+              <git-revision>3a5ac075f4f4055a481bb86b10db652a8b6157e3</git-revision>
             </manifestEntries>
           </archive>
         </configuration>

@@ -1,3 +1,11 @@
+# Unreleased
+
+## Added
+
+## Fixed
+
+## Changed
+
 # 0.2.37 (2022-09-14 / 5b770a2)
 
 ## Added
