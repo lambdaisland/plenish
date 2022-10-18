@@ -6,7 +6,8 @@
   {:line-item/description "Widgets"
    :line-item/quantity 5
    :line-item/price 1.0M
-   :line-item/category :items})
+   :line-item/category :items
+   :line-item/foo 123})
 
 (f/defactory user
   {:user/email "arne@example.com"
