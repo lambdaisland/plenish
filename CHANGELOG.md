@@ -2,9 +2,11 @@
 
 ## Added
 
-## Fixed
+- Added a `find-max-t` helper function, for picking up work where it was left off
 
 ## Changed
+
+- Throw when trying to reprocess an earlier transaction
 
 # 0.2.37 (2022-09-14 / 5b770a2)
 

@@ -1,2 +1,3 @@
 #kaocha/v1
-{:plugins [:notifier :print-invocations :profiling]}
+{:plugins [:notifier :print-invocations :profiling]
+ :capture-output? false}
