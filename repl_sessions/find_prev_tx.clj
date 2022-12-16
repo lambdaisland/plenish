@@ -20,3 +20,17 @@
   (d/log conn)
   1000
   9010))
+
+;; Given we are currently processing a certain transaction (say t=1012), can we
+;; find the t value of the previous transaction? This could be useful to add an
+;; additional guarantee that transactions are processed exactly in order, by
+;; adding a postgresql trigger that validates that transactions form an unbroken
+;; chain.
+
+(let [max-t 1012
+      db (d/as-of (d/db conn) (dec max-t))]
+  (d/q '[:find (max ?t) .
+         :where
+         [?i :db/txInstant]
+         [(datomic.api/tx->t ?i) ?t]]
+       db))

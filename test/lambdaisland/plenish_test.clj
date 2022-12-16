@@ -26,11 +26,14 @@
       @(d/transact *conn* factories/schema)
       (f))))
 
-(defn import! [metaschema]
-  (let [ctx (plenish/initial-ctx *conn* metaschema)]
-    (plenish/import-tx-range
-     ctx *conn* *ds*
-     (d/tx-range (d/log *conn*) nil nil))))
+(defn import!
+  ([metaschema]
+   (import! metaschema nil))
+  ([metaschema t]
+   (let [ctx (plenish/initial-ctx *conn* metaschema t)]
+     (plenish/import-tx-range
+      ctx *conn* *ds*
+      (d/tx-range (d/log *conn*) t nil)))))
 
 (defn transact! [tx]
   @(d/transact *conn* tx))
@@ -110,7 +113,7 @@
                :idents/ident "fruit/orange"}]
              (jdbc/execute! *ds* ["SELECT fruit.db__id, idents.ident FROM fruit, idents WHERE fruit.type = idents.db__id;"]))))))
 
-(deftest update-cardinality-one-attribute
+(deftest update-cardinality-one-attribute--membership
   (testing "membership attribute"
     (transact! [{:db/ident :fruit/type
                  :db/valueType :db.type/string
@@ -125,8 +128,9 @@
       (import! {:tables {:fruit/type {}}})
       (is (= [{:fruit/db__id apple-id
                :fruit/type "orange"}]
-             (jdbc/execute! *ds* ["SELECT * FROM fruit"])))))
+             (jdbc/execute! *ds* ["SELECT * FROM fruit"]))))))
 
+(deftest update-cardinality-one-attribute--regular
   (testing "regular attribute"
     (transact! [{:db/ident :veggie/type
                  :db/valueType :db.type/string
@@ -173,6 +177,15 @@
       (is (= [{:veggie_x_rating/db__id brocolli-id
                :veggie_x_rating/rating 5}]
              (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"]))))))
+
+(deftest duplicate-import-throws
+  (testing "Trying to import a transaction that was already processed should throw"
+    (fd/create! *conn* factories/cart)
+    (import! factories/metaschema)
+
+    (let [max-t (plenish/find-max-t *ds*)]
+      (is (thrown? com.impossibl.postgres.jdbc.PGSQLIntegrityConstraintViolationException
+                   (import! factories/metaschema max-t))))))
 
 (comment
   ;; REPL alternative to fixture

@@ -269,21 +269,24 @@
                 [:delete
                  {:table  (table-name ctx mem-attr)
                   :values {"db__id" eid}}]
-                [:upsert
-                 {:table  (table-name ctx mem-attr)
-                  :by #{"db__id"}
-                  :values (into (cond-> {"db__id" eid}
-                                  ;; Bit of manual fudgery to also get the "t"
-                                  ;; value of each transaction into
-                                  ;; our "transactions" table.
-                                  (= :db/txInstant mem-attr)
-                                  (assoc "t" (d/tx->t (-t (first datoms)))))
-                                (map (juxt #(column-name ctx mem-attr (ctx-ident ctx (-a %)))
-                                           #(when (-added? %)
-                                              (encode-value ctx
-                                                            (ctx-valueType ctx (-a %))
-                                                            (-v %)))))
-                                datoms)}])))))
+                (let [table (table-name ctx mem-attr)]
+                  [(if (= "transactions" table)
+                     :insert
+                     :upsert)
+                   {:table table
+                    :by #{"db__id"}
+                    :values (into (cond-> {"db__id" eid}
+                                    ;; Bit of manual fudgery to also get the "t"
+                                    ;; value of each transaction into
+                                    ;; our "transactions" table.
+                                    (= :db/txInstant mem-attr)
+                                    (assoc "t" (d/tx->t (-t (first datoms)))))
+                                  (map (juxt #(column-name ctx mem-attr (ctx-ident ctx (-a %)))
+                                             #(when (-added? %)
+                                                (encode-value ctx
+                                                              (ctx-valueType ctx (-a %))
+                                                              (-v %)))))
+                                  datoms)}]))))))
 
 (defn card-many-entity-ops
   "Add operations `:ops` to the context for all the `cardinality/many` datoms in a
@@ -435,6 +438,10 @@
                         :if-not-exists]}))
    columns))
 
+(defmethod op->sql :insert [[_ {:keys [table by values]}]]
+  [{:insert-into [(keyword table)]
+    :values      [values]}])
+
 (defmethod op->sql :upsert [[_ {:keys [table by values]}]]
   (let [op {:insert-into   [(keyword table)]
             :values        [values]
@@ -510,27 +517,27 @@
   configuration regarding tables and target db, and eventually `:ops` that need
   to be processed."
   ([conn metaschema]
-   (initial-ctx conn metaschema 999))
+   (initial-ctx conn metaschema nil))
   ([conn metaschema t]
-  ;; Bootstrap, make sure we have info about idents that datomic creates itself
-  ;; at db creation time. d/as-of t=999 is basically an empty database with only
-  ;; metaschema attributes (:db/txInstant etc), since the first "real"
-  ;; transaction is given t=1000. Interesting to note that Datomic seems to
-  ;; bootstrap in pieces: t=0 most basic idents, t=57 add double, t=63 add
-  ;; docstrings, ...
-   (let [idents (pull-idents (d/as-of (d/db conn) t))]
+   ;; Bootstrap, make sure we have info about idents that datomic creates itself
+   ;; at db creation time. d/as-of t=999 is basically an empty database with only
+   ;; metaschema attributes (:db/txInstant etc), since the first "real"
+   ;; transaction is given t=1000. Interesting to note that Datomic seems to
+   ;; bootstrap in pieces: t=0 most basic idents, t=57 add double, t=63 add
+   ;; docstrings, ...
+   (let [idents (pull-idents (d/as-of (d/db conn) (or t 999)))]
      {;; Track datomic schema
       :entids (into {} (map (juxt :db/ident :db/id)) idents)
       :idents (into {} (map (juxt :db/id identity)) idents)
-     ;; Configure/track relational schema
+      ;; Configure/track relational schema
       :tables (-> metaschema
                   :tables
                   (update :db/txInstant assoc :name "transactions")
                   (update :db/ident assoc :name "idents"))
-     ;; Mapping from datomic to relational type
+      ;; Mapping from datomic to relational type
       :db-types pg-type
-     ;; Create two columns that don't have a attribute as such in datomic, but
-     ;; which we still want to track
+      ;; Create two columns that don't have a attribute as such in datomic, but
+      ;; which we still want to track
       :ops [[:ensure-columns
              {:table   "idents"
               :columns {:db/id {:name "db__id"
@@ -565,3 +572,16 @@
                      (jdbc/execute! jdbc-tx %)) queries))
         (recur (dissoc ctx :ops) txs))
       ctx)))
+
+(defn find-max-t
+  "Find the highest value in the transactions table in postgresql. The sync should
+  continue from `(inc (find-max-t ds))`"
+  [ds]
+  (:max
+   (first
+    (try
+      (jdbc/execute! ds ["SELECT max(t) FROM transactions"])
+      (catch Exception e
+        ;; If the transactions table doesn't yet exist, return `nil`, so we start
+        ;; from the beginning of the log
+        nil)))))
