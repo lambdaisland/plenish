@@ -5,6 +5,7 @@
             [lambdaisland.plenish :as plenish]
             [lambdaisland.plenish.factories :as factories]
             [lambdaisland.facai.datomic-peer :as fd]
+            [clojure.instant :as inst]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
 
@@ -59,7 +60,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-01-01T12:57:01.089Z")
             :cart/age_ms     123.456
             :cart/user       user-id}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
@@ -73,7 +74,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-06-23T12:57:01.089Z")
             :cart/user       user-id
             :cart/age_ms     nil}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
@@ -155,8 +156,7 @@
 (deftest update-cardinality-many-attribute
   ;; Does it make sense to have a cardinality/many attribute be the membership
   ;; attribute? Not sure. Punting on this for now.
-  #_(testing "membership attribute"
-      )
+  #_(testing "membership attribute")
 
   (testing "regular attribute"
     (transact! [{:db/ident :veggie/type
@@ -197,5 +197,4 @@
   (def *ds* (jdbc/get-datasource "jdbc:pgsql://localhost:5432/replica?user=postgres"))
 
   (require 'kaocha.repl)
-  (kaocha.repl/run)
-  )
+  (kaocha.repl/run))
