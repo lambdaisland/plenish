@@ -176,6 +176,15 @@
       (import! {:tables {:veggie/type {}}})
       (is (= [{:veggie_x_rating/db__id brocolli-id
                :veggie_x_rating/rating 5}]
+             (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"])))
+
+      (transact! [[:db/add brocolli-id :veggie/rating 9000]])
+
+      (import! {:tables {:veggie/type {}}} (inc (plenish/find-max-t)))
+      (is (= [{:veggie_x_rating/db__id brocolli-id
+               :veggie_x_rating/rating 5}
+              {:veggie_x_rating/db__id brocolli-id
+               :veggie_x_rating/rating 9000}]
              (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"]))))))
 
 (deftest duplicate-import-throws
@@ -197,4 +206,8 @@
   (def *ds* (jdbc/get-datasource "jdbc:pgsql://localhost:5432/replica?user=postgres"))
 
   (require 'kaocha.repl)
-  (kaocha.repl/run))
+  (kaocha.repl/run `update-cardinality-many-attribute)
+
+  (kaocha.repl/test-plan)
+
+  )

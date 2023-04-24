@@ -2,9 +2,11 @@
 
 ## Added
 
+- Convenience function `sync-to-latest`
+
 ## Fixed
 
-## Changed
+- Fixed issue where multiple cardinality-many attributes would lead to clashing constraint names
 
 # 0.3.45 (2022-12-23 / b87cb3a)
 

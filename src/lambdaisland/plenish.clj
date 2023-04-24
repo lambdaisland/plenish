@@ -468,7 +468,7 @@
    ;; asserted once, so a given [eid value] for a given attribute has to be
    ;; unique.
    {::create-index {:on table
-                    :name "unique_attr"
+                    :name (str "unique_attr_" table "_" val-col)
                     :unique? true
                     :if-not-exists? true
                     :columns [:db__id (keyword val-col)]}}])
@@ -553,7 +553,12 @@
   and a JDBC datasource `ds`"
   [ctx conn ds tx-range]
   (loop [ctx ctx
-         [tx & txs] tx-range]
+         [tx & txs] tx-range
+         cnt 1]
+    (when (= (mod cnt 100) 0)
+      (print ".") (flush))
+    (when (= (mod cnt 1000) 0)
+      (println (str "\n" (java.time.Instant/now))) (flush))
     (if tx
       (let [ctx (process-tx ctx conn tx)
             queries (eduction
@@ -570,7 +575,8 @@
           (run! dbg (:ops ctx))
           (run! #(do (dbg %)
                      (jdbc/execute! jdbc-tx %)) queries))
-        (recur (dissoc ctx :ops) txs))
+        (recur (dissoc ctx :ops) txs
+               (inc cnt)))
       ctx)))
 
 (defn find-max-t
@@ -585,3 +591,23 @@
         ;; If the transactions table doesn't yet exist, return `nil`, so we start
         ;; from the beginning of the log
         nil)))))
+
+(defn sync-to-latest
+  "Convenience function that combines the ingredients above for the common case of
+  processing all new transactions up to the latest one."
+  [datomic-conn pg-conn metaschema]
+  (let [;; Find the most recent transaction that has been copied, or `nil` if this
+        ;; is the first run
+        max-t (find-max-t pg-conn)
+
+        ;; Query the current datomic schema. Plenish will track schema changes as
+        ;; it processes transcations, but it needs to know what the schema looks
+        ;; like so far.
+        ctx   (initial-ctx datomic-conn metaschema max-t)
+
+        ;; Grab the datomic transactions you want Plenish to process. This grabs
+        ;; all transactions that haven't been processed yet.
+        txs   (d/tx-range (d/log datomic-conn) (inc max-t) nil)]
+
+    ;; Get to work
+    (import-tx-range ctx datomic-conn pg-conn txs)))

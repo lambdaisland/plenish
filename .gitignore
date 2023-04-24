@@ -13,3 +13,4 @@ resources/public/ui
 out
 .#*
 deps.local.edn
+musicbrainz
