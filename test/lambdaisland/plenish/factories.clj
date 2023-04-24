@@ -16,7 +16,7 @@
    :user/homepage (java.net.URI. "http://example.com")})
 
 (f/defactory cart
-  {:cart/created-at #inst "2022-06-23T12:57:01.089-00:00"
+  {:cart/created-at #inst "2022-06-23T12:57:01.089000000-00:00"
    :cart/age-ms 123.456
    :cart/line-items [line-item line-item]
    :cart/user user}
