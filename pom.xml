@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.lambdaisland</groupId>
   <artifactId>plenish</artifactId>
-  <version>0.3.45</version>
+  <version>0.4.50</version>
   <name>plenish</name>
   <description></description>
   <url>https://github.com/lambdaisland/plenish</url>
@@ -25,7 +25,7 @@
     <url>https://github.com/lambdaisland/plenish</url>
     <connection>scm:git:git://github.com/lambdaisland/plenish.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/lambdaisland/plenish.git</developerConnection>
-    <tag>6f0f897fb54f8e8d8a0f48344935ac059d3a7f96</tag>
+    <tag>fd61e910df538046315140441591a5583d019f44</tag>
   </scm>
   <dependencies>
     <dependency>
@@ -36,17 +36,17 @@
     <dependency>
       <groupId>com.cnuernber</groupId>
       <artifactId>charred</artifactId>
-      <version>1.018</version>
+      <version>1.028</version>
     </dependency>
     <dependency>
       <groupId>com.github.seancorfield</groupId>
       <artifactId>next.jdbc</artifactId>
-      <version>1.3.847</version>
+      <version>1.3.874</version>
     </dependency>
     <dependency>
       <groupId>com.github.seancorfield</groupId>
       <artifactId>honeysql</artifactId>
-      <version>2.4.947</version>
+      <version>2.4.1026</version>
     </dependency>
   </dependencies>
   <build>
@@ -76,7 +76,7 @@
         <configuration>
           <archive>
             <manifestEntries>
-              <git-revision>6f0f897fb54f8e8d8a0f48344935ac059d3a7f96</git-revision>
+              <git-revision>fd61e910df538046315140441591a5583d019f44</git-revision>
             </manifestEntries>
           </archive>
         </configuration>
