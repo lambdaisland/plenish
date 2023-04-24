@@ -5,7 +5,7 @@ Restock your warehouse.
 Sync Datomic to a RDBMS.
 
 <!-- badges -->
-[![CircleCI](https://circleci.com/gh/lambdaisland/plenish.svg?style=svg)](https://circleci.com/gh/lambdaisland/plenish) [![cljdoc badge](https://cljdoc.org/badge/lambdaisland/plenish)](https://cljdoc.org/d/lambdaisland/plenish) [![Clojars Project](https://img.shields.io/clojars/v/lambdaisland/plenish.svg)](https://clojars.org/lambdaisland/plenish)
+[![cljdoc badge](https://cljdoc.org/badge/com.lambdaisland/plenish)](https://cljdoc.org/d/com.lambdaisland/plenish) [![Clojars Project](https://img.shields.io/clojars/v/com.lambdaisland/plenish.svg)](https://clojars.org/com.lambdaisland/plenish)
 <!-- /badges -->
 
 ## Requirements
