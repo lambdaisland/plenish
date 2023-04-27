@@ -607,7 +607,7 @@
 
         ;; Grab the datomic transactions you want Plenish to process. This grabs
         ;; all transactions that haven't been processed yet.
-        txs   (d/tx-range (d/log datomic-conn) (inc max-t) nil)]
+        txs   (d/tx-range (d/log datomic-conn) (when max-t (inc max-t)) nil)]
 
     ;; Get to work
     (import-tx-range ctx datomic-conn pg-conn txs)))
