@@ -9,12 +9,8 @@
 (def pg-conn (jdbc/get-datasource "jdbc:pgsql://localhost:5432/mbrainz?user=plenish&password=plenish"))
 
 (def metaschema
-  {:country/name {}
-   :artist/gid {}
-   :abstractRelease/gid {}
-   :release/gid {}
-   :medium/tracks {}
-   :track/name {}})
+  {:tables {:release/name {}
+            :artist/name {}}})
 
 (def initial-ctx (plenish/initial-ctx datomic-conn metaschema))
 

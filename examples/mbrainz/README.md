@@ -49,3 +49,23 @@ From the `datomic-pro-$VERSION` directory, [restore the backup](http://docs.dato
 ```
 clj -M:dev:cider:postgresql:datomic-pro
 ```
+
+## Results
+
+After running the commands in `src/lambdaisland/mbrainz.clj`, the tables in Postgres db are
+
+```
+mbrainz# \d
+               List of relations
+ Schema │        Name        │ Type  │  Owner  
+────────┼────────────────────┼───────┼─────────
+ public │ artist             │ table │ plenish
+ public │ idents             │ table │ plenish
+ public │ idents_x_partition │ table │ plenish
+ public │ release            │ table │ plenish
+ public │ release_x_artists  │ table │ plenish
+ public │ release_x_labels   │ table │ plenish
+ public │ release_x_media    │ table │ plenish
+ public │ transactions       │ table │ plenish
+(8 rows)
+```
