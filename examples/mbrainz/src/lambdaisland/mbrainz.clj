@@ -16,4 +16,8 @@
    :medium/tracks {}
    :track/name {}})
 
-(plenish/sync-to-latest datomic-conn pg-conn metaschema)
+(def initial-ctx (plenish/initial-ctx datomic-conn metaschema))
+
+(def new-ctx (plenish/import-tx-range
+              initial-ctx datomic-conn pg-conn
+              (d/tx-range (d/log datomic-conn) nil nil)))
