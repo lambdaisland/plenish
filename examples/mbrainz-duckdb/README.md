@@ -2,7 +2,7 @@
 
 This example demonstrates how mbrainz datomic database works with the 
 plenish. To use this example, we need to prepare the Datomic database
-and the empty Postgres database.
+and the empty duckDB database.
 
 ## Prepare the Datomic database
 ### Getting Datomic
@@ -38,29 +38,15 @@ From the `datomic-pro-$VERSION` directory, [restore the backup](http://docs.dato
 ## Prepare the empty duckdb database
 
 1. Install duckdb CLI. Homebrew: `brew install duckdb`
+2. rm /tmp/mbrainz
 
-## Init the nREPL
+## Init the nREPL with Debug flag
 
 ```
-clj -M:dev:cider:postgresql:datomic-pro
+export PLENISH_DEBUG=true &&  clj -M:dev:cider:duckdb:datomic-pro
 ```
 
 ## Results
 
-After running the commands in `src/lambdaisland/mbrainz.clj`, the tables in Postgres db are
+After running the commands in `src/lambdaisland/mbrainz.clj`, the tables in duckDB are
 
-```
-mbrainz# \d
-               List of relations
- Schema │        Name        │ Type  │  Owner  
-────────┼────────────────────┼───────┼─────────
- public │ artist             │ table │ plenish
- public │ idents             │ table │ plenish
- public │ idents_x_partition │ table │ plenish
- public │ release            │ table │ plenish
- public │ release_x_artists  │ table │ plenish
- public │ release_x_labels   │ table │ plenish
- public │ release_x_media    │ table │ plenish
- public │ transactions       │ table │ plenish
-(8 rows)
-```
