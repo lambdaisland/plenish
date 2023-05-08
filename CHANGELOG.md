@@ -10,6 +10,7 @@
 
 ## Added
 
+- First public release
 - Convenience function `sync-to-latest`
 
 ## Fixed
@@ -28,16 +29,10 @@
 
 # 0.2.37 (2022-09-14 / 5b770a2)
 
-## Added
-
 ## Fixed
 
-## Changed
+- Fix updates and retractions
 
 # 0.1.23 (2022-07-25 / cf784ed)
 
-## Added
-
-## Fixed
-
-## Changed
+- First proof of concept
