@@ -21,7 +21,7 @@
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.82.1306"}}}
 
   :duckdb
-  {:extra-deps {org.duckdb/duckdb_jdbc {:mvn/version "0.7.1"}}}
+  {:extra-deps {org.duckdb/duckdb_jdbc {:mvn/version "0.8.0"}}}
 
   :datomic-pro
   {:extra-deps {com.datomic/datomic-pro {:mvn/version "1.0.6202"}}}
