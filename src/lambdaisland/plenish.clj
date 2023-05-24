@@ -192,7 +192,8 @@
     :db.type/keyword (str (when (qualified-ident? value)
                             (str (namespace value) "/"))
                           (name value))
-    :db.type/instant [:raw (format "to_timestamp(%.3f)" (double (/ (.getTime ^java.util.Date value) 1000)))]
+    :db.type/instant [:raw (format "epoch_ms(%d)" (inst-ms value))]
+    :db.type/uuid (str value)
     value))
 
 ;; The functions below are the heart of the process
