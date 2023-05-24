@@ -193,6 +193,7 @@
                             (str (namespace value) "/"))
                           (name value))
     :db.type/instant [:raw (format "epoch_ms(%d)" (inst-ms value))]
+    :db.type/uuid (str value)
     value))
 
 ;; The functions below are the heart of the process
