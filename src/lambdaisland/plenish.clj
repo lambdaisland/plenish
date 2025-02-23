@@ -7,7 +7,8 @@
             [honey.sql :as honey]
             [honey.sql.helpers :as hh]
             [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+            [next.jdbc.result-set :as rs]
+            [lambdaisland.plenish.protocols :as proto]))
 
 (set! *warn-on-reflection* true)
 
@@ -179,23 +180,6 @@
               ctx
               tx-rest))))
 
-(defn encode-value
-  "Do some pre-processing on a value based on the datomic value type, so that
-  HoneySQL/JDBC is happy with it. Somewhat naive and postgres specific right
-  now."
-  [ctx type value]
-  (case type
-    :db.type/ref (if (keyword? value)
-                   (ctx-entid ctx value)
-                   value)
-    :db.type/tuple [:raw (str \' (str/replace (str (charred/write-json-str value)) "'" "''") \' "::jsonb")]
-    :db.type/keyword (str (when (qualified-ident? value)
-                            (str (namespace value) "/"))
-                          (name value))
-    :db.type/instant [:raw (format "epoch_ms(%d)" (inst-ms value))]
-    :db.type/uuid (str value)
-    value))
-
 ;; The functions below are the heart of the process
 
 ;; process-tx                       -  process all datoms in a single transaction
@@ -207,7 +191,7 @@
   "Add operations `:ops` to the context for all the `cardinality/one` datoms in a
   single transaction and a single entity/table, identified by its memory
   attribute."
-  [{:keys [tables] :as ctx} mem-attr eid datoms]
+  [{:keys [tables db-adapter] :as ctx} mem-attr eid datoms]
   {:pre [(every? #(= eid (-e %)) datoms)]}
   (let [;; An update of an attribute will manifest as two datoms in the same
         ;; transaction, one with added=true, and one with added=false. In this
@@ -284,9 +268,10 @@
                                     (assoc "t" (d/tx->t (-t (first datoms)))))
                                   (map (juxt #(column-name ctx mem-attr (ctx-ident ctx (-a %)))
                                              #(when (-added? %)
-                                                (encode-value ctx
-                                                              (ctx-valueType ctx (-a %))
-                                                              (-v %)))))
+                                                (proto/encode-value db-adapter
+                                                                    ctx
+                                                                    (ctx-valueType ctx (-a %))
+                                                                    (-v %)))))
                                   datoms)}]))))))
 
 (defn card-many-entity-ops
@@ -294,7 +279,7 @@
   single transaction and a single table, identified by its memory attribute.
   Each `:db.cardinality/many` attribute results in a separate two-column join
   table."
-  [{:keys [tables] :as ctx} mem-attr eid datoms]
+  [{:keys [tables db-adapter] :as ctx} mem-attr eid datoms]
   (let [missing-joins (sequence
                        (comp
                         (remove #(get-in ctx [:tables mem-attr :join-tables (ctx-ident ctx (-a %))]))
@@ -327,7 +312,7 @@
                       value (-v d)
                       sql-table (join-table-name ctx mem-attr attr)
                       sql-col (column-name ctx mem-attr attr)
-                      sql-val (encode-value ctx (ctx-valueType ctx attr-id) value)]
+                      sql-val (proto/encode-value db-adapter ctx (ctx-valueType ctx attr-id) value)]
                   (if (-added? d)
                     [:upsert
                      {:table sql-table
@@ -517,9 +502,9 @@
   contains both caches for quick lookup of datomic schema information,
   configuration regarding tables and target db, and eventually `:ops` that need
   to be processed."
-  ([conn metaschema]
-   (initial-ctx conn metaschema nil))
-  ([conn metaschema t]
+  ([conn metaschema db-adapter]
+   (initial-ctx conn metaschema db-adapter nil))
+  ([conn metaschema db-adapter t]
    ;; Bootstrap, make sure we have info about idents that datomic creates itself
    ;; at db creation time. d/as-of t=999 is basically an empty database with only
    ;; metaschema attributes (:db/txInstant etc), since the first "real"
@@ -535,6 +520,7 @@
                   :tables
                   (update :db/txInstant assoc :name "transactions")
                   (update :db/ident assoc :name "idents"))
+      :db-adapter db-adapter
       ;; Mapping from datomic to relational type
       :db-types pg-type
       ;; Create two columns that don't have a attribute as such in datomic, but
@@ -596,7 +582,7 @@
 (defn sync-to-latest
   "Convenience function that combines the ingredients above for the common case of
   processing all new transactions up to the latest one."
-  [datomic-conn pg-conn metaschema]
+  [datomic-conn pg-conn metaschema db-adapter]
   (let [;; Find the most recent transaction that has been copied, or `nil` if this
         ;; is the first run
         max-t (find-max-t pg-conn)
@@ -604,7 +590,7 @@
         ;; Query the current datomic schema. Plenish will track schema changes as
         ;; it processes transcations, but it needs to know what the schema looks
         ;; like so far.
-        ctx   (initial-ctx datomic-conn metaschema max-t)
+        ctx   (initial-ctx datomic-conn metaschema db-adapter max-t)
 
         ;; Grab the datomic transactions you want Plenish to process. This grabs
         ;; all transactions that haven't been processed yet.
