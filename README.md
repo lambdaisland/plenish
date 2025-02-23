@@ -24,7 +24,9 @@ yet, this is what you need:
 (def metaschema
   {:tables {:user/name {}}})
 
-(plenish/sync-to-latest datomic-conn pg-conn metaschema)
+(def db-adapter (postgres/db-adapter))
+
+(plenish/sync-to-latest datomic-conn pg-conn metaschema db-adapter)
 ```
 
 There are more fine-grained functions if you want to have greater control over
@@ -38,7 +40,7 @@ the process.
       ;; query the current datomic schema. plenish will track schema changes as
       ;; it processes transcations, but it needs to know what the schema looks
       ;; like so far.
-      ctx   (plenish/initial-ctx datomic-conn metaschema max-t)
+      ctx   (plenish/initial-ctx datomic-conn metaschema db-adapter max-t)
 
       ;; grab the datomic transactions you want plenish to process. this grabs
       ;; all transactions that haven't been processed yet.
