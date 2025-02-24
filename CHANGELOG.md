@@ -2,9 +2,11 @@
 
 ## Added
 
-## Fixed
+- DuckDB adatper and PostgresDB adapter. 
 
 ## Changed
+
+- Change `initial-ctx` and `sync-to-latest` to accept a db-adapter parameter 
 
 # 0.4.50 (2023-04-24 / 1d5eca9)
 
