@@ -10,7 +10,7 @@ Sync Datomic to a RDBMS.
 
 ## Requirements
 
-Plenish requires Clojure version >= 1.11.1.
+Plenish requires Clojure version >= 1.11.2.
 
 ## Usage
 
