@@ -2,8 +2,7 @@
 
 ## Added
 
-- plenish/adapters/duckdb.clj
-- plenish/adapters/postgres.clj
+- DuckDB adatper and PostgresDB adapter. 
 
 ## Changed
 
