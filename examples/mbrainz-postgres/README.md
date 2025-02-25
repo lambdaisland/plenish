@@ -14,7 +14,6 @@ Start the transactor:
     cd datomic-pro-$VERSION
     bin/transactor config/samples/dev-transactor-template.properties
 
-
 ### Getting the Data
 
 Next download the

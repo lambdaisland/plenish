@@ -2,6 +2,7 @@
   (:require
    [datomic.api :as d]
    [lambdaisland.plenish :as plenish]
+   [lambdaisland.plenish.adapters.postgres :as postgres]
    [next.jdbc :as jdbc]
    [next.jdbc.result-set :as rs]))
 
@@ -12,7 +13,9 @@
   {:tables {:release/name {}
             :artist/name {}}})
 
-(def initial-ctx (plenish/initial-ctx datomic-conn metaschema))
+(def db-adapter (postgres/db-adapter))
+
+(def initial-ctx (plenish/initial-ctx datomic-conn metaschema db-adapter))
 
 (def new-ctx (plenish/import-tx-range
               initial-ctx datomic-conn pg-conn
