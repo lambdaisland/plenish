@@ -21,8 +21,11 @@
                 com.impossibl.pgjdbc-ng/pgjdbc-ng {:mvn/version "0.8.9"}  ; new generation driver
                 }}
 
+  :duckdb
+  {:extra-deps {org.duckdb/duckdb_jdbc {:mvn/version "1.0.0"}}}
+
   :datomic-pro
-  {:extra-deps {com.datomic/peer {:mvn/version "1.0.6726"}}}
+  {:extra-deps {com.datomic/peer {:mvn/version "1.0.7277"}}}
 
   :datomic-cloud
   {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}
