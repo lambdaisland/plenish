@@ -206,6 +206,14 @@
   (def *ds* (jdbc/get-datasource "jdbc:duckdb:/tmp/plenish_replica"))
 
   (require 'kaocha.repl)
+  (kaocha.repl/run `basic-create-sync-test)
+  (kaocha.repl/run `add-membership-after-attributes)
+  (kaocha.repl/run `retract-attribute-test)
+  (kaocha.repl/run `retract-entity-test)
+  (kaocha.repl/run `ident-enum-test)
+  (kaocha.repl/run `update-cardinality-one-attribute--membership)
+  (kaocha.repl/run `update-cardinality-one-attribute--regular)
   (kaocha.repl/run `update-cardinality-many-attribute)
+  (kaocha.repl/run `duplicate-import-throws)
 
   (kaocha.repl/test-plan))
