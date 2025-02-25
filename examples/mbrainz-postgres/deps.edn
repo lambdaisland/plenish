@@ -1,0 +1,35 @@
+{:paths ["src" "resources"]
+
+ :deps
+ {org.clojure/clojure {:mvn/version "1.11.2"}
+  com.cnuernber/charred {:mvn/version "1.028"}
+  com.github.seancorfield/next.jdbc {:mvn/version "1.3.874"}
+  com.github.seancorfield/honeysql {:mvn/version "2.4.1026"}
+  com.lambdaisland/plenish {:mvn/version "../../"}}
+
+ :mvn/repos
+ {"my.datomic.com" {:url "https://my.datomic.com/repo"}}
+
+ :aliases
+ {:dev
+  {:extra-paths ["dev"]
+   :extra-deps  {com.lambdaisland/facai {:mvn/version "0.7.59-alpha"}
+                 djblue/portal {:mvn/version "RELEASE"}}}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.82.1306"}}}
+
+  :postgresql
+  {:extra-deps {;; org.postgresql/postgresql {:mvn/version "42.4.0"}      ; "classic" pg jdbc driver
+                com.impossibl.pgjdbc-ng/pgjdbc-ng {:mvn/version "0.8.9"}  ; new generation driver
+                }}
+
+  :datomic-pro
+  {:extra-deps {com.datomic/datomic-pro {:mvn/version "1.0.7277"}}}
+
+  :datomic-cloud
+  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}
+
+  :datomic-free
+  {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5703.21"}}}}}
