@@ -28,7 +28,4 @@
   {:extra-deps {com.datomic/peer {:mvn/version "1.0.7277"}}}
 
   :datomic-cloud
-  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}
-
-  :datomic-free
-  {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5697"}}}}}
+  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}}}
