@@ -1,15 +1,16 @@
 (ns lambdaisland.duckdb.plenish-test
-  (:require [clojure.test :refer :all]
-            [datomic.api :as d]
-            [lambdaisland.facai :as f]
-            [lambdaisland.plenish :as plenish]
-            [lambdaisland.plenish.adapters.duckdb :as duckdb]
-            [lambdaisland.plenish.factories :as factories]
-            [lambdaisland.facai.datomic-peer :as fd]
-            [clojure.instant :as inst]
-            [clojure.java.shell :refer [sh]]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require
+   [clojure.test :refer :all]
+   [datomic.api :as d]
+   [lambdaisland.facai :as f]
+   [lambdaisland.plenish :as plenish]
+   [lambdaisland.plenish.adapters.duckdb :as duckdb]
+   [lambdaisland.plenish.factories :as factories]
+   [lambdaisland.facai.datomic-peer :as fd]
+   [clojure.instant :as inst]
+   [clojure.java.shell :refer [sh]]
+   [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as rs]))
 
 (def ^:dynamic *conn* "Datomic connection" nil)
 (def ^:dynamic *ds* "JDBC datasource" nil)
@@ -203,7 +204,7 @@
                      (doto (str "datomic:mem://" (gensym "tst"))
                        d/create-database))
                 (d/transact factories/schema)))
-  (def *ds* (jdbc/get-datasource "jdbc:duckdb:/tmp/plenish_replica"))
+  (def ^:dynamic *ds* (jdbc/get-datasource "jdbc:duckdb:/tmp/plenish_replica"))
 
   (require 'kaocha.repl)
   (kaocha.repl/run `basic-create-sync-test)

@@ -1,14 +1,15 @@
 (ns lambdaisland.plenish
   "Transfer datomic data into a relational target database, transaction per
   transaction."
-  (:require [charred.api :as charred]
-            [clojure.string :as str]
-            [datomic.api :as d]
-            [honey.sql :as honey]
-            [honey.sql.helpers :as hh]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]
-            [lambdaisland.plenish.protocols :as proto]))
+  (:require
+   [charred.api :as charred]
+   [clojure.string :as str]
+   [datomic.api :as d]
+   [honey.sql :as honey]
+   [honey.sql.helpers :as hh]
+   [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as rs]
+   [lambdaisland.plenish.protocols :as proto]))
 
 (set! *warn-on-reflection* true)
 
