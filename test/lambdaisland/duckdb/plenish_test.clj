@@ -60,7 +60,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-01-01T12:57:01.089")
             :cart/age_ms     123.456
             :cart/user       user-id}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
@@ -74,7 +74,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-06-23T12:57:01.089")
             :cart/user       user-id
             :cart/age_ms     nil}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
