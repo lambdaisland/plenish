@@ -19,4 +19,20 @@
         :db.type/instant [:raw (format "epoch_ms(%d)" (inst-ms value))]
         :db.type/uri (str value)
         :db.type/uuid (str value)
-        value))))
+        value))
+    (db-type [_]
+      {:db.type/ref :bigint
+       :db.type/keyword :text
+       :db.type/long :bigint
+       :db.type/string :text
+       :db.type/boolean :boolean
+       :db.type/uuid :uuid
+       :db.type/instant :timestampz ;; no time zone information in java.util.Date
+       :db.type/double :double
+   ;;   :db.type/fn
+       :db.type/float :float
+       :db.type/bytes :bytea
+       :db.type/uri :text
+       :db.type/bigint :numeric
+       :db.type/bigdec :numeric
+       :db.type/tuple :json})))

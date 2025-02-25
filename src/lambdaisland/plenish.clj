@@ -523,7 +523,7 @@
                   (update :db/ident assoc :name "idents"))
       :db-adapter db-adapter
       ;; Mapping from datomic to relational type
-      :db-types pg-type
+      :db-types (proto/db-type db-adapter)
       ;; Create two columns that don't have a attribute as such in datomic, but
       ;; which we still want to track
       :ops [[:ensure-columns
