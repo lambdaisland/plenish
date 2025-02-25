@@ -45,9 +45,11 @@ Check again if the first argument starting with `file://`
 1. Run `psql` to connect to the Postgres database
 2. Inside the psql session, run the following commands to create user and empty database.
 
+```
    CREATE DATABASE mbrainz;
    CREATE ROLE plenish WITH LOGIN PASSWORD 'plenish';
    GRANT ALL ON DATABASE mbrainz TO plenish;
+```
 
 ## Init the nREPL
 
@@ -58,6 +60,14 @@ clj -M:dev:cider:postgresql:datomic-pro
 ## Results
 
 After running the commands in `src/lambdaisland/mbrainz.clj`, the tables in Postgres db are
+
+- Login to the result DB:
+
+```
+psql mbrainz
+```
+
+- Check the content of the DB:
 
 ```
 mbrainz# \d
@@ -73,4 +83,10 @@ mbrainz# \d
  public │ release_x_media    │ table │ plenish
  public │ transactions       │ table │ plenish
 (8 rows)
+
+mbrainz# select count(*) from transactions;
+ count 
+───────
+  1318
+(1 row)
 ```
