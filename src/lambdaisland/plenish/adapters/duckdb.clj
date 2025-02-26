@@ -3,7 +3,11 @@
   (:require [charred.api :as charred]
             [clojure.string :as str]
             [lambdaisland.plenish.protocols :as proto]
-            [lambdaisland.plenish :as plenish]))
+            [lambdaisland.plenish :as plenish])
+  (:import [java.sql Timestamp]))
+
+(defn date->timestamp [^java.util.Date date]
+  (Timestamp/from (.toInstant date)))
 
 (defn db-adapter []
   (reify proto/IDatomicEncoder
@@ -16,7 +20,7 @@
         :db.type/keyword (str (when (qualified-ident? value)
                                 (str (namespace value) "/"))
                               (name value))
-        :db.type/instant [:raw (format "epoch_ms(%d)" (inst-ms value))]
+        :db.type/instant (date->timestamp value)
         :db.type/uri (str value)
         :db.type/uuid (str value)
         value))
@@ -27,7 +31,7 @@
        :db.type/string :text
        :db.type/boolean :boolean
        :db.type/uuid :uuid
-       :db.type/instant :timestampz ;; no time zone information in java.util.Date
+       :db.type/instant :timestamp ;; no time zone information in java.util.Date
        :db.type/double :double
    ;;   :db.type/fn
        :db.type/float :float
