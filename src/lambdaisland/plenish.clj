@@ -1,14 +1,15 @@
 (ns lambdaisland.plenish
   "Transfer datomic data into a relational target database, transaction per
   transaction."
-  (:require [charred.api :as charred]
-            [clojure.string :as str]
-            [datomic.api :as d]
-            [honey.sql :as honey]
-            [honey.sql.helpers :as hh]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]
-            [lambdaisland.plenish.protocols :as proto]))
+  (:require
+   [charred.api :as charred]
+   [clojure.string :as str]
+   [datomic.api :as d]
+   [honey.sql :as honey]
+   [honey.sql.helpers :as hh]
+   [next.jdbc :as jdbc]
+   [next.jdbc.result-set :as rs]
+   [lambdaisland.plenish.protocols :as proto]))
 
 (set! *warn-on-reflection* true)
 
@@ -522,7 +523,7 @@
                   (update :db/ident assoc :name "idents"))
       :db-adapter db-adapter
       ;; Mapping from datomic to relational type
-      :db-types pg-type
+      :db-types (proto/db-type db-adapter)
       ;; Create two columns that don't have a attribute as such in datomic, but
       ;; which we still want to track
       :ops [[:ensure-columns
@@ -571,13 +572,15 @@
   continue from `(inc (find-max-t ds))`"
   [ds]
   (:max
-   (first
-    (try
-      (jdbc/execute! ds ["SELECT max(t) FROM transactions"])
-      (catch Exception e
+   (update-keys
+    (first
+     (try
+       (jdbc/execute! ds ["SELECT max(t) FROM transactions"])
+       (catch Exception e
         ;; If the transactions table doesn't yet exist, return `nil`, so we start
         ;; from the beginning of the log
-        nil)))))
+         nil)))
+    (constantly :max))))
 
 (defn sync-to-latest
   "Convenience function that combines the ingredients above for the common case of

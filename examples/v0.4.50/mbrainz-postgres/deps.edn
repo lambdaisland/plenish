@@ -4,7 +4,11 @@
  {org.clojure/clojure {:mvn/version "1.11.2"}
   com.cnuernber/charred {:mvn/version "1.028"}
   com.github.seancorfield/next.jdbc {:mvn/version "1.3.874"}
-  com.github.seancorfield/honeysql {:mvn/version "2.4.1026"}}
+  com.github.seancorfield/honeysql {:mvn/version "2.4.1026"}
+  com.lambdaisland/plenish {:mvn/version "0.4.50"}}
+
+ :mvn/repos
+ {"my.datomic.com" {:url "https://my.datomic.com/repo"}}
 
  :aliases
  {:dev
@@ -21,11 +25,11 @@
                 com.impossibl.pgjdbc-ng/pgjdbc-ng {:mvn/version "0.8.9"}  ; new generation driver
                 }}
 
-  :duckdb
-  {:extra-deps {org.duckdb/duckdb_jdbc {:mvn/version "1.0.0"}}}
-
   :datomic-pro
-  {:extra-deps {com.datomic/peer {:mvn/version "1.0.7277"}}}
+  {:extra-deps {com.datomic/datomic-pro {:mvn/version "1.0.6202"}}}
 
   :datomic-cloud
-  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}}}
+  {:extra-deps {com.datomic/client-cloud {:mvn/version "1.0.123"}}}
+
+  :datomic-free
+  {:extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5703.21"}}}}}

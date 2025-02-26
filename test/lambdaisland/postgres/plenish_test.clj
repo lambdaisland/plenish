@@ -1,8 +1,9 @@
-(ns lambdaisland.plenish-test
+(ns lambdaisland.postgres.plenish-test
   (:require [clojure.test :refer :all]
             [datomic.api :as d]
             [lambdaisland.facai :as f]
             [lambdaisland.plenish :as plenish]
+            [lambdaisland.plenish.adapters.postgres :as postgres]
             [lambdaisland.plenish.factories :as factories]
             [lambdaisland.facai.datomic-peer :as fd]
             [clojure.instant :as inst]
@@ -27,11 +28,13 @@
       @(d/transact *conn* factories/schema)
       (f))))
 
+(def db-adapter (postgres/db-adapter))
+
 (defn import!
   ([metaschema]
    (import! metaschema nil))
   ([metaschema t]
-   (let [ctx (plenish/initial-ctx *conn* metaschema t)]
+   (let [ctx (plenish/initial-ctx *conn* metaschema db-adapter t)]
      (plenish/import-tx-range
       ctx *conn* *ds*
       (d/tx-range (d/log *conn*) t nil)))))
@@ -60,7 +63,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-01-01 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-01-01T12:57:01.089")
             :cart/age_ms     123.456
             :cart/user       user-id}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
@@ -74,7 +77,7 @@
     (import! factories/metaschema)
 
     (is (= {:cart/db__id     cart-id
-            :cart/created_at (java.sql.Timestamp/valueOf "2022-06-23 12:57:01.089")
+            :cart/created_at (inst/read-instant-date "2022-06-23T12:57:01.089")
             :cart/user       user-id
             :cart/age_ms     nil}
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
@@ -208,6 +211,4 @@
   (require 'kaocha.repl)
   (kaocha.repl/run `update-cardinality-many-attribute)
 
-  (kaocha.repl/test-plan)
-
-  )
+  (kaocha.repl/test-plan))
