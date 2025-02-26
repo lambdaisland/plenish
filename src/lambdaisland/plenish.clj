@@ -572,13 +572,15 @@
   continue from `(inc (find-max-t ds))`"
   [ds]
   (:max
-   (first
-    (try
-      (jdbc/execute! ds ["SELECT max(t) FROM transactions"])
-      (catch Exception e
+   (update-keys
+    (first
+     (try
+       (jdbc/execute! ds ["SELECT max(t) FROM transactions"])
+       (catch Exception e
         ;; If the transactions table doesn't yet exist, return `nil`, so we start
         ;; from the beginning of the log
-        nil)))))
+         nil)))
+    (constantly :max))))
 
 (defn sync-to-latest
   "Convenience function that combines the ingredients above for the common case of
