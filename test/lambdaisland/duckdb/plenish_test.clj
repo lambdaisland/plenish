@@ -40,13 +40,20 @@
 (defn transact! [tx]
   @(d/transact *conn* tx))
 
+(defn strip-namespace
+  "remove namespace of every keys"
+  [m]
+  (update-keys m
+               (comp keyword name)))
+
 (deftest basic-create-sync-test
   (fd/create! *conn* factories/cart)
 
   (import! factories/metaschema)
 
-  (is (= {:users/email "arne@example.com"
-          :users/email_confirmed? true}
+  (is (= (strip-namespace
+          {:users/email "arne@example.com"
+           :users/email_confirmed? true})
          (jdbc/execute-one!
           *ds*
           ["SELECT email, \"email_confirmed?\" FROM users;"]))))
@@ -60,10 +67,11 @@
 
     (import! factories/metaschema)
 
-    (is (= {:cart/db__id     cart-id
-            :cart/created_at (inst/read-instant-date "2022-01-01T12:57:01.089")
-            :cart/age_ms     123.456
-            :cart/user       user-id}
+    (is (= (strip-namespace
+            {:cart/db__id     cart-id
+             :cart/created_at (inst/read-instant-date "2022-01-01T12:57:01.089")
+             :cart/age_ms     123.456
+             :cart/user       user-id})
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))))
 
 (deftest retract-attribute-test
@@ -74,15 +82,17 @@
     (transact! [[:db/retract cart-id :cart/age-ms 123.456]])
     (import! factories/metaschema)
 
-    (is (= {:cart/db__id     cart-id
-            :cart/created_at (inst/read-instant-date "2022-06-23T12:57:01.089")
-            :cart/user       user-id
-            :cart/age_ms     nil}
+    (is (= (strip-namespace
+            {:cart/db__id     cart-id
+             :cart/created_at (inst/read-instant-date "2022-06-23T12:57:01.089")
+             :cart/user       user-id
+             :cart/age_ms     nil})
            (jdbc/execute-one! *ds* ["SELECT * FROM cart;"])))
-    (is (= [{:cart_x_line_items/db__id 17592186045418
-             :cart_x_line_items/line_items 17592186045419}
-            {:cart_x_line_items/db__id 17592186045418
-             :cart_x_line_items/line_items 17592186045420}]
+    (is (= (mapv strip-namespace
+                 [{:cart_x_line_items/db__id 17592186045418
+                   :cart_x_line_items/line_items 17592186045419}
+                  {:cart_x_line_items/db__id 17592186045418
+                   :cart_x_line_items/line_items 17592186045420}])
            (jdbc/execute! *ds* ["SELECT * FROM cart_x_line_items;"])))))
 
 (deftest retract-entity-test
@@ -109,10 +119,11 @@
                                          :fruit/type :fruit/orange}])]
       (import! {:tables {:fruit/type {}}})
 
-      (is (= [{:fruit/db__id (get tempids "apple")
-               :idents/ident "fruit/apple"}
-              {:fruit/db__id (get tempids "orange")
-               :idents/ident "fruit/orange"}]
+      (is (= (mapv strip-namespace
+                   [{:fruit/db__id (get tempids "apple")
+                     :idents/ident "fruit/apple"}
+                    {:fruit/db__id (get tempids "orange")
+                     :idents/ident "fruit/orange"}])
              (jdbc/execute! *ds* ["SELECT fruit.db__id, idents.ident FROM fruit, idents WHERE fruit.type = idents.db__id;"]))))))
 
 (deftest update-cardinality-one-attribute--membership
@@ -128,8 +139,9 @@
                    :fruit/type "orange"}])
 
       (import! {:tables {:fruit/type {}}})
-      (is (= [{:fruit/db__id apple-id
-               :fruit/type "orange"}]
+      (is (= [(strip-namespace
+               {:fruit/db__id apple-id
+                :fruit/type "orange"})]
              (jdbc/execute! *ds* ["SELECT * FROM fruit"]))))))
 
 (deftest update-cardinality-one-attribute--regular
@@ -149,9 +161,10 @@
                    :veggie/rating 5}])
 
       (import! {:tables {:veggie/type {}}})
-      (is (= [{:veggie/db__id brocolli-id
-               :veggie/type "brocolli"
-               :veggie/rating 5}]
+      (is (= [(strip-namespace
+               {:veggie/db__id brocolli-id
+                :veggie/type "brocolli"
+                :veggie/rating 5})]
              (jdbc/execute! *ds* ["SELECT * FROM veggie"]))))))
 
 (deftest update-cardinality-many-attribute
@@ -175,17 +188,19 @@
                   [:db/retract brocolli-id :veggie/rating 4]])
 
       (import! {:tables {:veggie/type {}}})
-      (is (= [{:veggie_x_rating/db__id brocolli-id
-               :veggie_x_rating/rating 5}]
+      (is (= [(strip-namespace
+               {:veggie_x_rating/db__id brocolli-id
+                :veggie_x_rating/rating 5})]
              (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"])))
 
       (transact! [[:db/add brocolli-id :veggie/rating 9000]])
 
       (import! {:tables {:veggie/type {}}} (inc (plenish/find-max-t *ds*)))
-      (is (= [{:veggie_x_rating/db__id brocolli-id
-               :veggie_x_rating/rating 5}
-              {:veggie_x_rating/db__id brocolli-id
-               :veggie_x_rating/rating 9000}]
+      (is (= (mapv strip-namespace
+                   [{:veggie_x_rating/db__id brocolli-id
+                     :veggie_x_rating/rating 5}
+                    {:veggie_x_rating/db__id brocolli-id
+                     :veggie_x_rating/rating 9000}])
              (jdbc/execute! *ds* ["SELECT * FROM veggie_x_rating"]))))))
 
 (deftest duplicate-import-throws
