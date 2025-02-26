@@ -1,3 +1,11 @@
+# Unreleased
+
+## Added
+
+## Fixed
+
+## Changed
+
 # 0.6.99 (2025-02-26 / 2295083)
 
 ## Added
