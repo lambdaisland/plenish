@@ -209,7 +209,7 @@
     (import! factories/metaschema)
 
     (let [max-t (plenish/find-max-t *ds*)]
-      (is (thrown? com.impossibl.postgres.jdbc.PGSQLIntegrityConstraintViolationException
+      (is (thrown? java.sql.SQLException
                    (import! factories/metaschema max-t))))))
 
 (comment
