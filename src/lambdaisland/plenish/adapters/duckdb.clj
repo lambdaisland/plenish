@@ -16,7 +16,7 @@
         :db.type/ref (if (keyword? value)
                        (plenish/ctx-entid ctx value)
                        value)
-        :db.type/tuple [:raw (str \' (str/replace (str (charred/write-json-str value)) "'" "''") \' "::jsonb")]
+        :db.type/tuple [:raw (str \' (str/replace (str (charred/write-json-str value)) "'" "''") \' "::json")]
         :db.type/keyword (str (when (qualified-ident? value)
                                 (str (namespace value) "/"))
                               (name value))
