@@ -99,6 +99,15 @@ bin/kaocha
 
 as usual.
 
+## Adding new SQL database adapter
+
+To add a new adapter, one should consider doing the following steps:
+
+1. Create a adapter inside `src/lambdaisland/plenish/adapters` directory, reify the `IDatomicEncoder` protocol.
+2. Add necessary test in file `test/lambdaisland/$ADAPTER/plenish_test.clj`
+
+When trying to make the test pass, consider temporily to remove the `jdbc/with-transaction` in `plenish.clj` so as to make the writing-to-db becomes writing in granuality of command instead of a series of commands.
+
 ## License
 
 Copyright &copy; 2023 Arne Brasseur and Contributors
