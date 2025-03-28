@@ -108,8 +108,40 @@ To add a new adapter, one should consider doing the following steps:
 
 When trying to make the test pass, consider temporily to remove the `jdbc/with-transaction` in `plenish.clj` so as to make the writing-to-db becomes writing in granuality of command instead of a series of commands.
 
+<!-- opencollective -->
+## Lambda Island Open Source
+
+Thank you! plenish is made possible thanks to our generous backers. [Become a
+backer on OpenCollective](https://opencollective.com/lambda-island) so that we
+can continue to make plenish better.
+
+<a href="https://opencollective.com/lambda-island">
+<img src="https://opencollective.com/lambda-island/organizations.svg?avatarHeight=46&width=800&button=false">
+<img src="https://opencollective.com/lambda-island/individuals.svg?avatarHeight=46&width=800&button=false">
+</a>
+<img align="left" src="https://github.com/lambdaisland/open-source/raw/master/artwork/lighthouse_readme.png">
+
+&nbsp;
+
+plenish is part of a growing collection of quality Clojure libraries created and maintained
+by the fine folks at [Gaiwan](https://gaiwan.co).
+
+Pay it forward by [becoming a backer on our OpenCollective](http://opencollective.com/lambda-island),
+so that we continue to enjoy a thriving Clojure ecosystem.
+
+You can find an overview of all our different projects at [lambdaisland/open-source](https://github.com/lambdaisland/open-source).
+
+&nbsp;
+
+&nbsp;
+
+&nbsp;
+<!-- /opencollective -->
+
+<!-- license -->
 ## License
 
 Copyright &copy; 2023 Arne Brasseur and Contributors
 
 Licensed under the term of the Mozilla Public License 2.0, see LICENSE.
+<!-- /license -->
